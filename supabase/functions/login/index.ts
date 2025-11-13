@@ -1,0 +1,144 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import { create } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { email, password }: LoginRequest = await req.json();
+
+    if (!email || !password) {
+      return new Response(
+        JSON.stringify({ error: 'Email and password are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Find user
+    const { data: user, error: fetchError } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .eq('status', 'active')
+      .eq('is_deleted', false)
+      .maybeSingle();
+
+    if (fetchError || !user) {
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'USER_LOGIN_FAILED',
+        module: 'auth',
+        actor_email: email,
+        success: false,
+        details: { reason: 'user_not_found' },
+        ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+        user_agent: req.headers.get('user-agent') || 'unknown',
+      });
+
+      return new Response(
+        JSON.stringify({ error: 'Invalid email or password' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+
+    if (!isValidPassword) {
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'USER_LOGIN_FAILED',
+        module: 'auth',
+        actor_id: user.id,
+        actor_email: email,
+        actor_role: user.role,
+        success: false,
+        details: { reason: 'invalid_password' },
+        ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+        user_agent: req.headers.get('user-agent') || 'unknown',
+      });
+
+      return new Response(
+        JSON.stringify({ error: 'Invalid email or password' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Update last login
+    await supabaseAdmin
+      .from('users')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', user.id);
+
+    // Generate JWT
+    const jwtSecret = Deno.env.get('JWT_SECRET') ?? '';
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(jwtSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+
+    const token = await create(
+      { alg: 'HS256', typ: 'JWT' },
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
+      },
+      key
+    );
+
+    // Log successful login
+    await supabaseAdmin.from('audit_logs').insert({
+      action: 'USER_LOGIN',
+      module: 'auth',
+      actor_id: user.id,
+      actor_email: email,
+      actor_role: user.role,
+      success: true,
+      ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+      user_agent: req.headers.get('user-agent') || 'unknown',
+    });
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+        redirectTo: '/dashboard',
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (error: any) {
+    console.error('Error in login:', error);
+    return new Response(
+      JSON.stringify({ error: error?.message || 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
