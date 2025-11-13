@@ -51,9 +51,7 @@ export const callEdgeFunction = async (
   body?: any
 ) => {
   const token = authStorage.getToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -61,7 +59,7 @@ export const callEdgeFunction = async (
 
   const { data, error } = await supabase.functions.invoke(functionName, {
     body,
-    headers,
+    ...(Object.keys(headers).length > 0 && { headers }),
   });
 
   if (error) throw error;
