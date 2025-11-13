@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +10,37 @@ interface SendOtpRequest {
   name: string;
   email: string;
   password: string;
+}
+
+// Hash password using Web Crypto API
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// Hash OTP using HMAC with secret
+async function hashOtp(otp: string): Promise<string> {
+  const secret = Deno.env.get('OTP_SECRET') ?? 'default-secret';
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(otp)
+  );
+  return Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 serve(async (req) => {
@@ -60,11 +90,11 @@ serve(async (req) => {
     const otpLength = parseInt(Deno.env.get('OTP_LENGTH') || '6');
     const otp = Math.floor(100000 + Math.random() * 900000).toString().slice(0, otpLength);
 
-    // Hash OTP with bcrypt
-    const otpHash = await bcrypt.hash(otp);
+    // Hash OTP with HMAC
+    const otpHash = await hashOtp(otp);
 
-    // Hash password temporarily
-    const passwordHash = await bcrypt.hash(password);
+    // Hash password
+    const passwordHash = await hashPassword(password);
 
     // Calculate expiry and resend times
     const expiryMinutes = parseInt(Deno.env.get('OTP_EXPIRY_MINUTES') || '10');

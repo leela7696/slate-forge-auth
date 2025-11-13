@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
 
 const corsHeaders = {
@@ -11,6 +10,16 @@ const corsHeaders = {
 interface LoginRequest {
   email: string;
   password: string;
+}
+
+// Hash password using Web Crypto API (same as send-otp)
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 serve(async (req) => {
@@ -59,8 +68,9 @@ serve(async (req) => {
       );
     }
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    // Verify password using constant-time comparison
+    const hashedInputPassword = await hashPassword(password);
+    const isValidPassword = hashedInputPassword === user.password_hash;
 
     if (!isValidPassword) {
       await supabaseAdmin.from('audit_logs').insert({

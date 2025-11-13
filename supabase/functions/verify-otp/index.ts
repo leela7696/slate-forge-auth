@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
 
 const corsHeaders = {
@@ -11,6 +10,27 @@ const corsHeaders = {
 interface VerifyOtpRequest {
   email: string;
   otp: string;
+}
+
+// Hash OTP using HMAC with secret (same as in send-otp)
+async function hashOtp(otp: string): Promise<string> {
+  const secret = Deno.env.get('OTP_SECRET') ?? 'default-secret';
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(otp)
+  );
+  return Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 serve(async (req) => {
@@ -74,8 +94,9 @@ serve(async (req) => {
       );
     }
 
-    // Verify OTP
-    const isValid = await bcrypt.compare(otp, otpRequest.otp_hash);
+    // Verify OTP using constant-time comparison
+    const expectedHash = await hashOtp(otp);
+    const isValid = expectedHash === otpRequest.otp_hash;
 
     if (!isValid) {
       // Decrement attempts
