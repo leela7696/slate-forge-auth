@@ -14,7 +14,224 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          actor_role: string | null
+          chain_hash: string | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          module: string
+          prev_hash: string | null
+          success: boolean | null
+          target_id: string | null
+          target_summary: string | null
+          target_type: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          actor_role?: string | null
+          chain_hash?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          module: string
+          prev_hash?: string | null
+          success?: boolean | null
+          target_id?: string | null
+          target_summary?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          actor_role?: string | null
+          chain_hash?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          module?: string
+          prev_hash?: string | null
+          success?: boolean | null
+          target_id?: string | null
+          target_summary?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      chain_head: {
+        Row: {
+          id: number
+          latest_hash: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: number
+          latest_hash?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: number
+          latest_hash?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      otp_requests: {
+        Row: {
+          attempts_left: number | null
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          name: string
+          otp_hash: string
+          password_hash: string
+          resend_after: string
+        }
+        Insert: {
+          attempts_left?: number | null
+          created_at?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          name: string
+          otp_hash: string
+          password_hash: string
+          resend_after: string
+        }
+        Update: {
+          attempts_left?: number | null
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          name?: string
+          otp_hash?: string
+          password_hash?: string
+          resend_after?: string
+        }
+        Relationships: []
+      }
+      permissions: {
+        Row: {
+          can_create: boolean | null
+          can_delete: boolean | null
+          can_edit: boolean | null
+          can_view: boolean | null
+          created_at: string | null
+          id: number
+          module: string
+          role_id: number | null
+        }
+        Insert: {
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          created_at?: string | null
+          id?: number
+          module: string
+          role_id?: number | null
+        }
+        Update: {
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          created_at?: string | null
+          id?: number
+          module?: string
+          role_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: number
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          created_at: string | null
+          email: string
+          external_providers: Json | null
+          id: string
+          is_deleted: boolean | null
+          last_login_at: string | null
+          name: string
+          password_hash: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          external_providers?: Json | null
+          id?: string
+          is_deleted?: boolean | null
+          last_login_at?: string | null
+          name: string
+          password_hash?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          external_providers?: Json | null
+          id?: string
+          is_deleted?: boolean | null
+          last_login_at?: string | null
+          name?: string
+          password_hash?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +240,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      app_role: "System Admin" | "Admin" | "Manager" | "User"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +367,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["System Admin", "Admin", "Manager", "User"],
+    },
   },
 } as const
