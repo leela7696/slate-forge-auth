@@ -9,5 +9,8 @@ verify_jwt = false
 [functions.verify-otp]
 verify_jwt = false
 
+[functions.resend-otp]
+verify_jwt = false
+
 [functions.login]
 verify_jwt = false

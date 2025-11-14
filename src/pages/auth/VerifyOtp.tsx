@@ -86,7 +86,7 @@ export default function VerifyOtp() {
     if (!canResend) return;
 
     try {
-      await callEdgeFunction("send-otp", { email });
+      await callEdgeFunction("resend-otp", { email });
       toast.success("New code sent!");
       setResendCooldown(60);
       setCanResend(false);
