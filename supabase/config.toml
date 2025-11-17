@@ -14,3 +14,15 @@ verify_jwt = false
 
 [functions.login]
 verify_jwt = false
+
+[functions.update-profile]
+verify_jwt = false
+
+[functions.change-email]
+verify_jwt = false
+
+[functions.change-password]
+verify_jwt = false
+
+[functions.forgot-password]
+verify_jwt = false
