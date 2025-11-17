@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { verify } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
 
@@ -15,6 +14,37 @@ const MAX_ATTEMPTS = 5;
 
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Hash OTP using HMAC with secret
+async function hashOtp(otp: string): Promise<string> {
+  const secret = Deno.env.get('OTP_SECRET') ?? 'default-secret';
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(otp)
+  );
+  return Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// Hash password using Web Crypto API
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 async function verifyToken(token: string) {
@@ -61,7 +91,7 @@ serve(async (req) => {
       const otpCode = generateOTP();
       await supabase.from('password_change_requests').delete().eq('user_id', userId);
       await supabase.from('password_change_requests').insert({
-        user_id: userId, email: userData.email, otp_hash: await bcrypt.hash(otpCode),
+        user_id: userId, email: userData.email, otp_hash: await hashOtp(otpCode),
         attempts_left: MAX_ATTEMPTS,
         expires_at: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60000).toISOString(),
         resend_after: new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000).toISOString(),
@@ -84,13 +114,14 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      if (!await bcrypt.compare(otp, request.otp_hash)) {
+      const expectedHash = await hashOtp(otp);
+      if (expectedHash !== request.otp_hash) {
         await supabase.from('password_change_requests').update({ attempts_left: request.attempts_left - 1 }).eq('id', request.id);
         return new Response(JSON.stringify({ error: 'Invalid OTP' }), 
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      await supabase.from('users').update({ password_hash: await bcrypt.hash(newPassword) }).eq('id', userId);
+      await supabase.from('users').update({ password_hash: await hashPassword(newPassword) }).eq('id', userId);
       await supabase.from('password_change_requests').delete().eq('id', request.id);
       return new Response(JSON.stringify({ success: true, message: 'Password updated' }), 
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
