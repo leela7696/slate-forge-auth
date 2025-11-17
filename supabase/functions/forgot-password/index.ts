@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +16,7 @@ function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function sendOTPEmail(email: string, otp: string, supabase: any) {
+async function sendOTPEmail(email: string, otp: string) {
   const html = `
     <!DOCTYPE html>
     <html>
@@ -37,16 +38,33 @@ async function sendOTPEmail(email: string, otp: string, supabase: any) {
           </div>
           <p>This OTP will expire in ${OTP_EXPIRY_MINUTES} minutes.</p>
           <div class="warning">
-            <strong>Security Notice:</strong> If you didn't request a password reset, please ignore this email and secure your account immediately.
+            <strong>Security Notice:</strong> If you didn't request this, ignore this email and secure your account.
           </div>
         </div>
       </body>
     </html>
   `;
 
-  await supabase.functions.invoke('send-email', {
-    body: { to: email, subject: 'Slate AI – Password Reset OTP', html },
+  const client = new SMTPClient({
+    connection: {
+      hostname: Deno.env.get('SMTP_HOST') ?? '',
+      port: parseInt(Deno.env.get('SMTP_PORT') ?? '587'),
+      tls: true,
+      auth: {
+        username: Deno.env.get('SMTP_USER') ?? '',
+        password: Deno.env.get('SMTP_PASS') ?? '',
+      },
+    },
   });
+
+  await client.send({
+    from: Deno.env.get('SMTP_FROM') ?? 'Slate AI <no-reply@slateai.com>',
+    to: email,
+    subject: 'Slate AI – Password Reset OTP',
+    html,
+  });
+
+  await client.close();
 }
 
 serve(async (req) => {
@@ -61,27 +79,17 @@ serve(async (req) => {
 
     const { action, email, otp, newPassword } = await req.json();
 
-    // Step 1: Send OTP
     if (action === 'send-otp') {
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid email address' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Invalid email' }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id, email')
-        .eq('email', email)
-        .single();
-
+      const { data: userData } = await supabase.from('users').select('id, email').eq('email', email).single();
+      
       if (!userData) {
-        // Don't reveal if user exists for security
-        return new Response(
-          JSON.stringify({ success: true, message: 'If the email exists, an OTP has been sent' }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: true, message: 'If email exists, OTP sent' }), 
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       const otpCode = generateOTP();
@@ -89,157 +97,81 @@ serve(async (req) => {
       const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
       const resendAfter = new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000);
 
-      // Delete any existing requests
-      await supabase
-        .from('password_change_requests')
-        .delete()
-        .eq('user_id', userData.id);
+      await supabase.from('password_change_requests').delete().eq('user_id', userData.id);
 
-      // Create new request
-      const { error: insertError } = await supabase
-        .from('password_change_requests')
-        .insert({
-          user_id: userData.id,
-          email: userData.email,
-          otp_hash: otpHash,
-          attempts_left: MAX_ATTEMPTS,
-          expires_at: expiresAt.toISOString(),
-          resend_after: resendAfter.toISOString(),
-        });
+      const { error: insertError } = await supabase.from('password_change_requests').insert({
+        user_id: userData.id, email: userData.email, otp_hash: otpHash, attempts_left: MAX_ATTEMPTS,
+        expires_at: expiresAt.toISOString(), resend_after: resendAfter.toISOString(),
+      });
 
       if (insertError) throw insertError;
 
-      await sendOTPEmail(userData.email, otpCode, supabase);
-
-      // Audit log
+      await sendOTPEmail(userData.email, otpCode);
       await supabase.from('audit_logs').insert({
-        action: 'PASSWORD_RESET_REQUESTED',
-        module: 'auth',
-        actor_email: userData.email,
-        success: true,
+        action: 'PASSWORD_RESET_REQUESTED', module: 'auth', actor_email: userData.email, success: true,
       });
 
-      return new Response(
-        JSON.stringify({ success: true, message: 'OTP sent to your email' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log(`Password reset OTP sent to: ${userData.email}`);
+      return new Response(JSON.stringify({ success: true, message: 'OTP sent' }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Step 2: Verify OTP and reset password
     if (action === 'reset') {
       if (!email || !otp || !newPassword) {
-        return new Response(
-          JSON.stringify({ error: 'Missing required fields' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Missing fields' }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       if (newPassword.length < 6) {
-        return new Response(
-          JSON.stringify({ error: 'Password must be at least 6 characters' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Password must be 6+ characters' }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .single();
+      const { data: userData } = await supabase.from('users').select('id').eq('email', email).single();
+      if (!userData) return new Response(JSON.stringify({ error: 'Invalid request' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-      if (!userData) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid request' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      const { data: request } = await supabase.from('password_change_requests')
+        .select('*').eq('user_id', userData.id).eq('email', email).single();
 
-      const { data: request } = await supabase
-        .from('password_change_requests')
-        .select('*')
-        .eq('user_id', userData.id)
-        .eq('email', email)
-        .single();
+      if (!request) return new Response(JSON.stringify({ error: 'No active request' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-      if (!request) {
-        return new Response(
-          JSON.stringify({ error: 'No active password reset request found' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      if (new Date(request.expires_at) < new Date()) return new Response(
+        JSON.stringify({ error: 'OTP expired' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-      if (new Date(request.expires_at) < new Date()) {
-        return new Response(
-          JSON.stringify({ error: 'OTP expired' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (request.attempts_left <= 0) {
-        return new Response(
-          JSON.stringify({ error: 'Maximum attempts exceeded' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      if (request.attempts_left <= 0) return new Response(
+        JSON.stringify({ error: 'Max attempts exceeded' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
       const isValid = await bcrypt.compare(otp, request.otp_hash);
-
       if (!isValid) {
-        await supabase
-          .from('password_change_requests')
-          .update({ attempts_left: request.attempts_left - 1 })
-          .eq('id', request.id);
-
-        return new Response(
-          JSON.stringify({ 
-            error: 'Invalid OTP', 
-            attemptsLeft: request.attempts_left - 1 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        await supabase.from('password_change_requests').update({ attempts_left: request.attempts_left - 1 }).eq('id', request.id);
+        return new Response(JSON.stringify({ error: 'Invalid OTP', attemptsLeft: request.attempts_left - 1 }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      // Hash new password
       const passwordHash = await bcrypt.hash(newPassword);
-
-      // Update user password
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ password_hash: passwordHash })
-        .eq('id', userData.id);
-
+      const { error: updateError } = await supabase.from('users').update({ password_hash: passwordHash }).eq('id', userData.id);
       if (updateError) throw updateError;
 
-      // Delete the request
-      await supabase
-        .from('password_change_requests')
-        .delete()
-        .eq('id', request.id);
-
-      // Audit log
+      await supabase.from('password_change_requests').delete().eq('id', request.id);
       await supabase.from('audit_logs').insert({
-        action: 'PASSWORD_RESET_COMPLETED',
-        module: 'auth',
-        actor_email: email,
-        success: true,
+        action: 'PASSWORD_RESET_COMPLETED', module: 'auth', actor_email: email, success: true,
       });
 
-      return new Response(
-        JSON.stringify({ success: true, message: 'Password reset successfully' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log(`Password reset completed for: ${email}`);
+      return new Response(JSON.stringify({ success: true, message: 'Password reset' }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    return new Response(
-      JSON.stringify({ error: 'Invalid action' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Invalid action' }), 
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error: any) {
     console.error('Error in forgot-password:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: error.message || 'Internal error' }), 
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });

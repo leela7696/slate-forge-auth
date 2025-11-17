@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +16,7 @@ function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function sendOTPEmail(email: string, otp: string, supabase: any) {
+async function sendOTPEmail(email: string, otp: string) {
   const html = `
     <!DOCTYPE html>
     <html>
@@ -44,9 +45,26 @@ async function sendOTPEmail(email: string, otp: string, supabase: any) {
     </html>
   `;
 
-  await supabase.functions.invoke('send-email', {
-    body: { to: email, subject: 'Slate AI – OTP Verification', html },
+  const client = new SMTPClient({
+    connection: {
+      hostname: Deno.env.get('SMTP_HOST') ?? '',
+      port: parseInt(Deno.env.get('SMTP_PORT') ?? '587'),
+      tls: true,
+      auth: {
+        username: Deno.env.get('SMTP_USER') ?? '',
+        password: Deno.env.get('SMTP_PASS') ?? '',
+      },
+    },
   });
+
+  await client.send({
+    from: Deno.env.get('SMTP_FROM') ?? 'Slate AI <no-reply@slateai.com>',
+    to: email,
+    subject: 'Slate AI – OTP Verification',
+    html,
+  });
+
+  await client.close();
 }
 
 serve(async (req) => {
@@ -90,13 +108,8 @@ serve(async (req) => {
       const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
       const resendAfter = new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000);
 
-      // Delete any existing requests
-      await supabase
-        .from('email_change_requests')
-        .delete()
-        .eq('user_id', user.id);
+      await supabase.from('email_change_requests').delete().eq('user_id', user.id);
 
-      // Create new request
       const { error: insertError } = await supabase
         .from('email_change_requests')
         .insert({
@@ -111,9 +124,8 @@ serve(async (req) => {
 
       if (insertError) throw insertError;
 
-      await sendOTPEmail(userData.email, otpCode, supabase);
+      await sendOTPEmail(userData.email, otpCode);
 
-      // Audit log
       await supabase.from('audit_logs').insert({
         action: 'EMAIL_CHANGE_OLD_OTP_SENT',
         module: 'profile',
@@ -122,236 +134,119 @@ serve(async (req) => {
         success: true,
       });
 
-      return new Response(
-        JSON.stringify({ success: true, message: 'OTP sent to current email' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log(`OTP sent to current email: ${userData.email}`);
+      return new Response(JSON.stringify({ success: true, message: 'OTP sent to current email' }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Step 2: Verify OTP from current email
     if (action === 'verify-old-otp') {
-      const { data: request } = await supabase
-        .from('email_change_requests')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'verifying_old')
-        .single();
+      const { data: request } = await supabase.from('email_change_requests')
+        .select('*').eq('user_id', user.id).eq('status', 'verifying_old').single();
 
-      if (!request) {
-        return new Response(
-          JSON.stringify({ error: 'No active email change request found' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      if (!request) return new Response(JSON.stringify({ error: 'No active request found' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-      if (new Date(request.expires_at) < new Date()) {
-        return new Response(
-          JSON.stringify({ error: 'OTP expired' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      if (new Date(request.expires_at) < new Date()) return new Response(
+        JSON.stringify({ error: 'OTP expired' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-      if (request.attempts_left <= 0) {
-        return new Response(
-          JSON.stringify({ error: 'Maximum attempts exceeded' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      if (request.attempts_left <= 0) return new Response(
+        JSON.stringify({ error: 'Maximum attempts exceeded' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
       const isValid = await bcrypt.compare(otp, request.old_email_otp_hash);
-
       if (!isValid) {
-        await supabase
-          .from('email_change_requests')
-          .update({ attempts_left: request.attempts_left - 1 })
-          .eq('id', request.id);
-
-        return new Response(
-          JSON.stringify({ 
-            error: 'Invalid OTP', 
-            attemptsLeft: request.attempts_left - 1 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        await supabase.from('email_change_requests').update({ attempts_left: request.attempts_left - 1 }).eq('id', request.id);
+        return new Response(JSON.stringify({ error: 'Invalid OTP', attemptsLeft: request.attempts_left - 1 }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      // Update status to verifying_new
-      await supabase
-        .from('email_change_requests')
-        .update({ status: 'verifying_new' })
-        .eq('id', request.id);
-
-      // Audit log
+      await supabase.from('email_change_requests').update({ status: 'verifying_new' }).eq('id', request.id);
       await supabase.from('audit_logs').insert({
-        action: 'EMAIL_CHANGE_OLD_OTP_VERIFIED',
-        module: 'profile',
-        actor_id: user.id,
-        success: true,
+        action: 'EMAIL_CHANGE_OLD_OTP_VERIFIED', module: 'profile', actor_id: user.id, success: true,
       });
 
-      return new Response(
-        JSON.stringify({ success: true, message: 'Old email verified' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: true, message: 'Old email verified' }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Step 3: Send OTP to new email
     if (action === 'send-new-otp') {
       if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid email address' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Invalid email' }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      // Check if email already exists
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', newEmail)
-        .single();
+      const { data: existingUser } = await supabase.from('users').select('id').eq('email', newEmail).single();
+      if (existingUser) return new Response(JSON.stringify({ error: 'Email already in use' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-      if (existingUser) {
-        return new Response(
-          JSON.stringify({ error: 'Email already in use' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      const { data: request } = await supabase.from('email_change_requests')
+        .select('*').eq('user_id', user.id).eq('status', 'verifying_new').single();
 
-      const { data: request } = await supabase
-        .from('email_change_requests')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'verifying_new')
-        .single();
-
-      if (!request) {
-        return new Response(
-          JSON.stringify({ error: 'Please verify your current email first' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      if (!request) return new Response(JSON.stringify({ error: 'Verify current email first' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
       const otpCode = generateOTP();
       const otpHash = await bcrypt.hash(otpCode);
       const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
       const resendAfter = new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000);
 
-      await supabase
-        .from('email_change_requests')
-        .update({
-          new_email: newEmail,
-          new_email_otp_hash: otpHash,
-          attempts_left: MAX_ATTEMPTS,
-          expires_at: expiresAt.toISOString(),
-          resend_after: resendAfter.toISOString(),
-        })
-        .eq('id', request.id);
+      await supabase.from('email_change_requests').update({
+        new_email: newEmail, new_email_otp_hash: otpHash, attempts_left: MAX_ATTEMPTS,
+        expires_at: expiresAt.toISOString(), resend_after: resendAfter.toISOString(),
+      }).eq('id', request.id);
 
-      await sendOTPEmail(newEmail, otpCode, supabase);
-
-      // Audit log
+      await sendOTPEmail(newEmail, otpCode);
       await supabase.from('audit_logs').insert({
-        action: 'EMAIL_CHANGE_NEW_OTP_SENT',
-        module: 'profile',
-        actor_id: user.id,
-        success: true,
-        details: { new_email: newEmail },
+        action: 'EMAIL_CHANGE_NEW_OTP_SENT', module: 'profile', actor_id: user.id, success: true, details: { new_email: newEmail },
       });
 
-      return new Response(
-        JSON.stringify({ success: true, message: 'OTP sent to new email' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: true, message: 'OTP sent to new email' }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Step 4: Verify new email OTP and update
     if (action === 'confirm') {
-      const { data: request } = await supabase
-        .from('email_change_requests')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'verifying_new')
-        .single();
+      const { data: request } = await supabase.from('email_change_requests')
+        .select('*').eq('user_id', user.id).eq('status', 'verifying_new').single();
 
-      if (!request || !request.new_email_otp_hash) {
-        return new Response(
-          JSON.stringify({ error: 'No active email change request found' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      if (!request || !request.new_email_otp_hash) return new Response(
+        JSON.stringify({ error: 'No active request found' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-      if (new Date(request.expires_at) < new Date()) {
-        return new Response(
-          JSON.stringify({ error: 'OTP expired' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      if (new Date(request.expires_at) < new Date()) return new Response(
+        JSON.stringify({ error: 'OTP expired' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-      if (request.attempts_left <= 0) {
-        return new Response(
-          JSON.stringify({ error: 'Maximum attempts exceeded' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      if (request.attempts_left <= 0) return new Response(
+        JSON.stringify({ error: 'Maximum attempts exceeded' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
       const isValid = await bcrypt.compare(otp, request.new_email_otp_hash);
-
       if (!isValid) {
-        await supabase
-          .from('email_change_requests')
-          .update({ attempts_left: request.attempts_left - 1 })
-          .eq('id', request.id);
-
-        return new Response(
-          JSON.stringify({ 
-            error: 'Invalid OTP', 
-            attemptsLeft: request.attempts_left - 1 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        await supabase.from('email_change_requests').update({ attempts_left: request.attempts_left - 1 }).eq('id', request.id);
+        return new Response(JSON.stringify({ error: 'Invalid OTP', attemptsLeft: request.attempts_left - 1 }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      // Update user email
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ email: request.new_email })
-        .eq('id', user.id);
-
+      const { error: updateError } = await supabase.from('users').update({ email: request.new_email }).eq('id', user.id);
       if (updateError) throw updateError;
 
-      // Mark request as completed
-      await supabase
-        .from('email_change_requests')
-        .update({ status: 'completed' })
-        .eq('id', request.id);
-
-      // Audit log
+      await supabase.from('email_change_requests').update({ status: 'completed' }).eq('id', request.id);
       await supabase.from('audit_logs').insert({
-        action: 'EMAIL_CHANGED',
-        module: 'profile',
-        actor_id: user.id,
-        actor_email: request.new_email,
-        success: true,
-        details: { old_email: request.old_email, new_email: request.new_email },
+        action: 'EMAIL_CHANGED', module: 'profile', actor_id: user.id, actor_email: request.new_email,
+        success: true, details: { old_email: request.old_email, new_email: request.new_email },
       });
 
-      return new Response(
-        JSON.stringify({ success: true, message: 'Email updated successfully', email: request.new_email }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: true, message: 'Email updated', email: request.new_email }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    return new Response(
-      JSON.stringify({ error: 'Invalid action' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Invalid action' }), 
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error: any) {
     console.error('Error in change-email:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: error.message || 'Internal error' }), 
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
