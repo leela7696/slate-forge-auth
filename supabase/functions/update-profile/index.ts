@@ -1,10 +1,30 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
+import { verify } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+async function verifyToken(token: string) {
+  try {
+    const jwtSecret = Deno.env.get('JWT_SECRET') ?? '';
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(jwtSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+    
+    const payload = await verify(token, key);
+    return payload;
+  } catch (error) {
+    console.error('JWT verification error:', error);
+    throw new Error('Invalid JWT');
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -22,10 +42,11 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      throw new Error('Unauthorized');
+    const payload = await verifyToken(token);
+    const userId = payload.userId as string;
+
+    if (!userId) {
+      throw new Error('Invalid token payload');
     }
 
     const { name, phone, department } = await req.json();
@@ -54,7 +75,7 @@ serve(async (req) => {
         department: department?.trim() || null,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', user.id)
+      .eq('id', userId)
       .select()
       .single();
 
@@ -67,14 +88,14 @@ serve(async (req) => {
     await supabase.from('audit_logs').insert({
       action: 'PROFILE_UPDATED',
       module: 'profile',
-      actor_id: user.id,
-      actor_email: user.email,
+      actor_id: userId,
+      actor_email: data.email,
       actor_role: data.role,
       success: true,
       details: { updated_fields: { name, phone, department } },
     });
 
-    console.log(`Profile updated successfully for user ${user.id}`);
+    console.log(`Profile updated successfully for user ${userId}`);
 
     return new Response(
       JSON.stringify({ success: true, user: data }),
@@ -84,7 +105,7 @@ serve(async (req) => {
     console.error('Error in update-profile:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: error.message === 'Invalid JWT' ? 401 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
