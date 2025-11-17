@@ -1,28 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
-import { authStorage } from "@/lib/auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { authStorage, callEdgeFunction } from "@/lib/auth";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { ChangeEmailModal } from "@/components/ChangeEmailModal";
+import { ChangePasswordModal } from "@/components/ChangePasswordModal";
+import { Mail, Lock, User, Calendar } from "lucide-react";
+import { format } from "date-fns";
 
 const profileSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
-  email: z.string().email(),
-  phone: z.string().optional(),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  phone: z.string().max(15, "Phone number is too long").optional(),
   department: z.string().optional(),
 });
 
@@ -30,28 +26,48 @@ type ProfileForm = z.infer<typeof profileSchema>;
 
 export default function Profile() {
   const [isLoading, setIsLoading] = useState(false);
-  const user = authStorage.getUser();
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [user, setUser] = useState(authStorage.getUser());
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: user?.name || "",
-      email: user?.email || "",
       phone: "",
       department: "",
     },
   });
 
-  const onSubmit = async (values: ProfileForm) => {
+  const fetchUserData = async () => {
+    const userData = authStorage.getUser();
+    setUser(userData);
+    if (userData) {
+      form.reset({
+        name: userData.name,
+        phone: (userData as any).phone || "",
+        department: (userData as any).department || "",
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const onSubmit = async (data: ProfileForm) => {
     setIsLoading(true);
     try {
-      // Update profile logic here
-      toast.success("Profile updated successfully!");
-      
-      // Update local storage
-      if (user) {
-        authStorage.setUser({ ...user, name: values.name });
-      }
+      const result = await callEdgeFunction('update-profile', {
+        name: data.name,
+        phone: data.phone,
+        department: data.department,
+      });
+
+      const updatedUser = { ...user, ...result.user };
+      authStorage.setUser(updatedUser as any);
+      setUser(updatedUser as any);
+      toast.success("Profile updated successfully");
     } catch (error: any) {
       toast.error(error.message || "Failed to update profile");
     } finally {
@@ -66,122 +82,101 @@ export default function Profile() {
         <main className="flex-1 p-8 bg-gradient-to-br from-background via-secondary/10 to-background">
           <div className="max-w-4xl mx-auto space-y-8">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Profile Settings</h1>
-              <p className="text-muted-foreground mt-1">
-                Manage your account information
-              </p>
+              <h1 className="text-3xl font-bold">Profile Settings</h1>
+              <p className="text-muted-foreground mt-1">Manage your account settings and personal information</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>Personal Information</CardTitle>
-                  <CardDescription>
-                    Update your personal details and contact information
-                  </CardDescription>
+                  <CardDescription>Update your personal details here</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
+                      <FormField control={form.control} name="name" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl><Input {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField control={form.control} name="phone" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Full Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
+                            <FormLabel>Mobile Number</FormLabel>
+                            <FormControl><Input {...field} placeholder="Optional" /></FormControl>
                             <FormMessage />
                           </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
+                        )} />
+                        <FormField control={form.control} name="department" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input {...field} disabled />
-                            </FormControl>
+                            <FormLabel>Designation</FormLabel>
+                            <FormControl><Input {...field} placeholder="Optional" /></FormControl>
                             <FormMessage />
                           </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone (Optional)</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="+1 (555) 000-0000" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="department"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Department (Optional)</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Engineering" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <Button type="submit" disabled={isLoading}>
-                        {isLoading ? "Saving..." : "Save Changes"}
-                      </Button>
+                        )} />
+                      </div>
+                      <Button type="submit" disabled={isLoading}>{isLoading ? "Saving..." : "Save Changes"}</Button>
                     </form>
                   </Form>
                 </CardContent>
               </Card>
 
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Account Status</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">Role</p>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Status</CardTitle>
+                  <CardDescription>Your current account information</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Email</p>
+                      <p className="text-sm text-muted-foreground">{user?.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Role</p>
                       <Badge variant="secondary">{user?.role}</Badge>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Status</p>
-                      <Badge className="bg-green-500">Active</Badge>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Member Since</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(user as any)?.created_at ? format(new Date((user as any).created_at), 'PPP') : 'N/A'}
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Connected Accounts</CardTitle>
-                    <CardDescription>
-                      Manage your external provider connections
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      No external accounts connected
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Security Settings</CardTitle>
+                  <CardDescription>Manage your account security</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start" onClick={() => setShowEmailModal(true)}>
+                    <Mail className="mr-2 h-4 w-4" />Change Email Address
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start" onClick={() => setShowPasswordModal(true)}>
+                    <Lock className="mr-2 h-4 w-4" />Change Password
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </main>
       </div>
+
+      <ChangeEmailModal open={showEmailModal} onOpenChange={setShowEmailModal} currentEmail={user?.email || ""} onSuccess={fetchUserData} />
+      <ChangePasswordModal open={showPasswordModal} onOpenChange={setShowPasswordModal} onSuccess={() => toast.success("Password changed successfully")} />
     </SidebarProvider>
   );
 }

@@ -98,10 +98,12 @@ export default function Login() {
                 {isLoading ? "Signing in..." : "Sign in"}
               </Button>
 
-              <div className="text-center text-sm text-muted-foreground">
-                Don't have an account?{" "}
+              <div className="flex items-center justify-between text-sm">
                 <Link to="/auth/signup" className="text-primary hover:underline">
-                  Sign up
+                  Don't have an account? Sign up
+                </Link>
+                <Link to="/auth/forgot-password" className="text-primary hover:underline">
+                  Forgot password?
                 </Link>
               </div>
             </form>

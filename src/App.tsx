@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Signup from "./pages/auth/Signup";
 import VerifyOtp from "./pages/auth/VerifyOtp";
 import Login from "./pages/auth/Login";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/auth/signup" element={<Signup />} />
           <Route path="/auth/verify-otp" element={<VerifyOtp />} />
           <Route path="/auth/login" element={<Login />} />
+          <Route path="/auth/forgot-password" element={<ForgotPassword />} />
           
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>

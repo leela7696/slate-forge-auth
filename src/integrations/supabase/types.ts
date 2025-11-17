@@ -92,6 +92,56 @@ export type Database = {
         }
         Relationships: []
       }
+      email_change_requests: {
+        Row: {
+          attempts_left: number
+          created_at: string | null
+          expires_at: string
+          id: string
+          new_email: string | null
+          new_email_otp_hash: string | null
+          old_email: string
+          old_email_otp_hash: string
+          resend_after: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attempts_left?: number
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          new_email?: string | null
+          new_email_otp_hash?: string | null
+          old_email: string
+          old_email_otp_hash: string
+          resend_after: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          attempts_left?: number
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          new_email?: string | null
+          new_email_otp_hash?: string | null
+          old_email?: string
+          old_email_otp_hash?: string
+          resend_after?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_change_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       otp_requests: {
         Row: {
           attempts_left: number | null
@@ -127,6 +177,47 @@ export type Database = {
           resend_after?: string
         }
         Relationships: []
+      }
+      password_change_requests: {
+        Row: {
+          attempts_left: number
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          otp_hash: string
+          resend_after: string
+          user_id: string
+        }
+        Insert: {
+          attempts_left?: number
+          created_at?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          otp_hash: string
+          resend_after: string
+          user_id: string
+        }
+        Update: {
+          attempts_left?: number
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          otp_hash?: string
+          resend_after?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "password_change_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       permissions: {
         Row: {
@@ -193,6 +284,7 @@ export type Database = {
       users: {
         Row: {
           created_at: string | null
+          department: string | null
           email: string
           external_providers: Json | null
           id: string
@@ -206,6 +298,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          department?: string | null
           email: string
           external_providers?: Json | null
           id?: string
@@ -219,6 +312,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          department?: string | null
           email?: string
           external_providers?: Json | null
           id?: string
