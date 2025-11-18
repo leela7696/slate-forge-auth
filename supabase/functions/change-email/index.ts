@@ -78,13 +78,22 @@ serve(async (req) => {
     const { action, newEmail, otp } = await req.json();
 
     if (action === 'send-old-otp') {
+      console.log('Sending old OTP for userId:', userId);
+      
       const { data: userData } = await supabase.from('users').select('email').eq('id', userId).single();
-      if (!userData) throw new Error('User not found');
+      if (!userData) {
+        console.error('User not found:', userId);
+        throw new Error('User not found');
+      }
+      
+      console.log('User email:', userData.email);
 
       const oldOtpCode = generateOTP();
 
-      await supabase.from('email_change_requests').delete().eq('user_id', userId);
-      await supabase.from('email_change_requests').insert({
+      const { error: deleteError } = await supabase.from('email_change_requests').delete().eq('user_id', userId);
+      if (deleteError) console.error('Error deleting old requests:', deleteError);
+      
+      const { data: insertedData, error: insertError } = await supabase.from('email_change_requests').insert({
         user_id: userId, 
         old_email: userData.email, 
         new_email: '',
@@ -94,7 +103,14 @@ serve(async (req) => {
         attempts_left: MAX_ATTEMPTS,
         expires_at: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60000).toISOString(),
         resend_after: new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000).toISOString(),
-      });
+      }).select();
+      
+      if (insertError) {
+        console.error('Error inserting email change request:', insertError);
+        throw new Error('Failed to create email change request');
+      }
+      
+      console.log('Email change request created:', insertedData);
 
       await sendOTPEmail(userData.email, oldOtpCode, true);
       return new Response(JSON.stringify({ success: true, message: 'OTP sent to current email' }), 
@@ -104,9 +120,31 @@ serve(async (req) => {
     if (action === 'verify-old-otp') {
       if (!otp) throw new Error('OTP required');
 
-      const { data: request } = await supabase.from('email_change_requests').select('*').eq('user_id', userId).single();
-      if (!request || new Date(request.expires_at) < new Date() || request.attempts_left <= 0) {
-        return new Response(JSON.stringify({ error: 'Invalid or expired request' }), 
+      console.log('Verifying old OTP for userId:', userId);
+      
+      const { data: request, error: fetchError } = await supabase
+        .from('email_change_requests')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      console.log('Fetched request:', request ? 'Found' : 'Not found', fetchError ? `Error: ${fetchError.message}` : '');
+      
+      if (!request) {
+        console.error('No email change request found for user:', userId);
+        return new Response(JSON.stringify({ error: 'No email change request found. Please try again.' }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      
+      if (new Date(request.expires_at) < new Date()) {
+        console.error('Request expired:', request.expires_at);
+        return new Response(JSON.stringify({ error: 'OTP expired. Please request a new one.' }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      
+      if (request.attempts_left <= 0) {
+        console.error('No attempts left');
+        return new Response(JSON.stringify({ error: 'Too many failed attempts. Please request a new OTP.' }), 
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
