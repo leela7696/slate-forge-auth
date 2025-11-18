@@ -99,7 +99,7 @@ serve(async (req) => {
         new_email: '',
         old_email_otp_hash: await hashOtp(oldOtpCode), 
         new_email_otp_hash: '',
-        status: 'pending_old_verification', 
+        status: 'verifying_old',
         attempts_left: MAX_ATTEMPTS,
         expires_at: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60000).toISOString(),
         resend_after: new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000).toISOString(),
@@ -155,7 +155,7 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      await supabase.from('email_change_requests').update({ status: 'old_email_verified' }).eq('id', request.id);
+      await supabase.from('email_change_requests').update({ status: 'verifying_new' }).eq('id', request.id);
       return new Response(JSON.stringify({ success: true, message: 'Current email verified' }), 
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -170,7 +170,7 @@ serve(async (req) => {
       }
 
       const { data: request } = await supabase.from('email_change_requests').select('*').eq('user_id', userId).single();
-      if (!request || request.status !== 'old_email_verified') {
+      if (!request || request.status !== 'verifying_new') {
         return new Response(JSON.stringify({ error: 'Please verify current email first' }), 
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
@@ -179,7 +179,7 @@ serve(async (req) => {
       await supabase.from('email_change_requests').update({ 
         new_email: newEmail.toLowerCase(),
         new_email_otp_hash: await hashOtp(newOtpCode),
-        status: 'pending_new_verification',
+        status: 'verifying_new',
         attempts_left: MAX_ATTEMPTS,
         expires_at: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60000).toISOString(),
         resend_after: new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000).toISOString(),
@@ -194,7 +194,7 @@ serve(async (req) => {
       if (!otp) throw new Error('OTP required');
 
       const { data: request } = await supabase.from('email_change_requests').select('*').eq('user_id', userId).single();
-      if (!request || request.status !== 'pending_new_verification' || new Date(request.expires_at) < new Date() || request.attempts_left <= 0) {
+      if (!request || request.status !== 'verifying_new' || new Date(request.expires_at) < new Date() || request.attempts_left <= 0) {
         return new Response(JSON.stringify({ error: 'Invalid or expired request' }), 
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
