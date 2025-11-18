@@ -75,28 +75,23 @@ serve(async (req) => {
     const userId = payload.userId as string;
     if (!userId) throw new Error('Invalid token');
 
-    const { action, newEmail, oldOtp, newOtp } = await req.json();
+    const { action, newEmail, otp } = await req.json();
 
-    if (action === 'initiate') {
-      if (!newEmail) throw new Error('New email required');
-
-      const { data: existingUser } = await supabase.from('users').select('id').eq('email', newEmail.toLowerCase()).neq('id', userId).maybeSingle();
-      if (existingUser) {
-        return new Response(JSON.stringify({ error: 'Email already in use' }), 
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-
+    if (action === 'send-old-otp') {
       const { data: userData } = await supabase.from('users').select('email').eq('id', userId).single();
       if (!userData) throw new Error('User not found');
 
       const oldOtpCode = generateOTP();
-      const newOtpCode = generateOTP();
 
       await supabase.from('email_change_requests').delete().eq('user_id', userId);
       await supabase.from('email_change_requests').insert({
-        user_id: userId, old_email: userData.email, new_email: newEmail.toLowerCase(),
-        old_email_otp_hash: await hashOtp(oldOtpCode), new_email_otp_hash: await hashOtp(newOtpCode),
-        status: 'pending_old_verification', attempts_left: MAX_ATTEMPTS,
+        user_id: userId, 
+        old_email: userData.email, 
+        new_email: '',
+        old_email_otp_hash: await hashOtp(oldOtpCode), 
+        new_email_otp_hash: '',
+        status: 'pending_old_verification', 
+        attempts_left: MAX_ATTEMPTS,
         expires_at: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60000).toISOString(),
         resend_after: new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000).toISOString(),
       });
@@ -106,8 +101,8 @@ serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    if (action === 'verify-old') {
-      if (!oldOtp) throw new Error('OTP required');
+    if (action === 'verify-old-otp') {
+      if (!otp) throw new Error('OTP required');
 
       const { data: request } = await supabase.from('email_change_requests').select('*').eq('user_id', userId).single();
       if (!request || new Date(request.expires_at) < new Date() || request.attempts_left <= 0) {
@@ -115,28 +110,50 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      const expectedHash = await hashOtp(oldOtp);
+      const expectedHash = await hashOtp(otp);
       if (expectedHash !== request.old_email_otp_hash) {
         await supabase.from('email_change_requests').update({ attempts_left: request.attempts_left - 1 }).eq('id', request.id);
         return new Response(JSON.stringify({ error: 'Invalid OTP' }), 
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      await supabase.from('email_change_requests').update({ status: 'pending_new_verification' }).eq('id', request.id);
-      
+      await supabase.from('email_change_requests').update({ status: 'old_email_verified' }).eq('id', request.id);
+      return new Response(JSON.stringify({ success: true, message: 'Current email verified' }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    if (action === 'send-new-otp') {
+      if (!newEmail) throw new Error('New email required');
+
+      const { data: existingUser } = await supabase.from('users').select('id').eq('email', newEmail.toLowerCase()).neq('id', userId).maybeSingle();
+      if (existingUser) {
+        return new Response(JSON.stringify({ error: 'Email already in use' }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const { data: request } = await supabase.from('email_change_requests').select('*').eq('user_id', userId).single();
+      if (!request || request.status !== 'old_email_verified') {
+        return new Response(JSON.stringify({ error: 'Please verify current email first' }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
       const newOtpCode = generateOTP();
       await supabase.from('email_change_requests').update({ 
+        new_email: newEmail.toLowerCase(),
         new_email_otp_hash: await hashOtp(newOtpCode),
-        attempts_left: MAX_ATTEMPTS 
+        status: 'pending_new_verification',
+        attempts_left: MAX_ATTEMPTS,
+        expires_at: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60000).toISOString(),
+        resend_after: new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000).toISOString(),
       }).eq('id', request.id);
       
-      await sendOTPEmail(request.new_email!, newOtpCode, false);
+      await sendOTPEmail(newEmail, newOtpCode, false);
       return new Response(JSON.stringify({ success: true, message: 'OTP sent to new email' }), 
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    if (action === 'verify-new') {
-      if (!newOtp) throw new Error('OTP required');
+    if (action === 'confirm') {
+      if (!otp) throw new Error('OTP required');
 
       const { data: request } = await supabase.from('email_change_requests').select('*').eq('user_id', userId).single();
       if (!request || request.status !== 'pending_new_verification' || new Date(request.expires_at) < new Date() || request.attempts_left <= 0) {
@@ -144,7 +161,7 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      const expectedHash = await hashOtp(newOtp);
+      const expectedHash = await hashOtp(otp);
       if (expectedHash !== request.new_email_otp_hash) {
         await supabase.from('email_change_requests').update({ attempts_left: request.attempts_left - 1 }).eq('id', request.id);
         return new Response(JSON.stringify({ error: 'Invalid OTP' }), 
