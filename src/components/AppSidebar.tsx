@@ -35,7 +35,7 @@ export function AppSidebar() {
   const handleLogout = () => {
     authHelpers.logout();
     toast.success("Logged out successfully");
-    navigate("/auth/login");
+    navigate("/auth");
   };
 
   const isActive = (path: string) => location.pathname === path;

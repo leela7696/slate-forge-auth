@@ -146,7 +146,7 @@ export default function VerifyOtp() {
 
           <div className="text-center text-sm text-muted-foreground">
             Wrong email?{" "}
-            <Link to="/auth/signup" className="text-primary hover:underline">
+            <Link to="/auth" className="text-primary hover:underline">
               Go back
             </Link>
           </div>

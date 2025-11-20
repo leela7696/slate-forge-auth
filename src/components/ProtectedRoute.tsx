@@ -9,7 +9,7 @@ export const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
   const isAuthenticated = authHelpers.isAuthenticated();
 
   if (!isAuthenticated) {
-    return <Navigate to="/auth/login" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   if (requiredRoles && !authHelpers.hasRole(requiredRoles)) {

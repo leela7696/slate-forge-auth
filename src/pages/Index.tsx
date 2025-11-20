@@ -16,10 +16,10 @@ export default function Index() {
             <span className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Slate AI</span>
           </div>
           <div className="flex gap-3">
-            <Link to="/auth/login">
+            <Link to="/auth">
               <Button variant="ghost" className="text-base">Log In</Button>
             </Link>
-            <Link to="/auth/signup">
+            <Link to="/auth">
               <Button className="text-base gap-2">
                 Get Started <ArrowRight className="w-4 h-4" />
               </Button>
@@ -49,13 +49,13 @@ export default function Index() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Link to="/auth/signup">
+            <Link to="/auth">
               <Button size="lg" className="text-lg px-10 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all gap-2">
                 Start Free Trial
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/auth/login">
+            <Link to="/auth">
               <Button size="lg" variant="outline" className="text-lg px-10 py-6 rounded-xl border-2">
                 Sign In
               </Button>
@@ -164,7 +164,7 @@ export default function Index() {
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Join thousands of developers building secure applications with Slate AI
           </p>
-          <Link to="/auth/signup">
+          <Link to="/auth">
             <Button size="lg" className="text-lg px-10 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all gap-2">
               Create Your Account
               <ArrowRight className="w-5 h-5" />
