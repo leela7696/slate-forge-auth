@@ -292,6 +292,7 @@ export type Database = {
           last_login_at: string | null
           name: string
           password_hash: string | null
+          phone: string | null
           role: Database["public"]["Enums"]["app_role"] | null
           status: string | null
           updated_at: string | null
@@ -306,6 +307,7 @@ export type Database = {
           last_login_at?: string | null
           name: string
           password_hash?: string | null
+          phone?: string | null
           role?: Database["public"]["Enums"]["app_role"] | null
           status?: string | null
           updated_at?: string | null
@@ -320,6 +322,7 @@ export type Database = {
           last_login_at?: string | null
           name?: string
           password_hash?: string | null
+          phone?: string | null
           role?: Database["public"]["Enums"]["app_role"] | null
           status?: string | null
           updated_at?: string | null
