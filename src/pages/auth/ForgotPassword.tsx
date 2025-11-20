@@ -78,7 +78,7 @@ export default function ForgotPassword() {
       if (error) throw error;
 
       toast({ title: "Success", description: "Password reset successfully" });
-      navigate('/auth/login');
+      navigate('/auth');
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -94,7 +94,7 @@ export default function ForgotPassword() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/auth/login')}
+              onClick={() => navigate('/auth')}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Login

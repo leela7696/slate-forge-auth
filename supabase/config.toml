@@ -15,6 +15,9 @@ verify_jwt = false
 [functions.login]
 verify_jwt = false
 
+[functions.check-email]
+verify_jwt = false
+
 [functions.update-profile]
 verify_jwt = false
 
