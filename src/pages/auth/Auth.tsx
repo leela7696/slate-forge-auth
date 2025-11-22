@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -130,7 +130,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
+          <CardTitle className="text-2xl font-bold text-center"><div className="flex items-center justify-center"><img src="/favicon1.ico" alt="Slate AI Logo" className="w-23 h-16" /></div>
             {mode === "email" && "Welcome to Slate AI"}
             {mode === "login" && "Welcome back"}
             {mode === "signup" && "Create an account"}
@@ -194,6 +194,11 @@ export default function Auth() {
                     </FormItem>
                   )}
                 />
+                <div className="flex justify-end">
+                  <Link to="/auth/forgot-password" className="text-sm text-primary hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>

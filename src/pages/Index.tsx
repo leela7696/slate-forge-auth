@@ -10,11 +10,8 @@ export default function Index() {
       <header className="border-b border-border/50 backdrop-blur-md bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-primary-foreground font-bold text-xl">S</span>
-            </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Slate AI</span>
-          </div>
+            <span><img src="/slateai-logo.png" alt="Slate AI Logo" className="w-25 h-14" /></span>
+          </div>  
           <div className="flex gap-3">
             <Link to="/auth">
               <Button variant="ghost" className="text-base">Log In</Button>
