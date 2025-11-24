@@ -10,6 +10,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { authHelpers, authStorage } from "@/lib/auth";
 import { toast } from "sonner";
@@ -19,6 +21,8 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const user = authStorage.getUser();
   const isAdmin = user && ['Admin', 'System Admin'].includes(user.role);
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   const mainItems = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -41,10 +45,18 @@ export function AppSidebar() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <Sidebar className="w-64">
+    <Sidebar className="w-64" collapsible="icon">
       <SidebarContent>
         <div className="p-4 border-b border-sidebar-border">
-          <h2 className="text-lg font-bold text-sidebar-foreground">Slate AI</h2>
+          <div className="flex flex-col items-center text-center gap-2">
+            <img
+              src={isCollapsed ? "/favicon1.ico" : "/slateai-logo.png"}
+              alt="Slate AI Logo"
+              className={`transition-all duration-200 ${
+                isCollapsed ? "h-6 w-6 rounded-md" : "h-12 w-auto"
+              }`}
+            />
+          </div>
         </div>
 
         <SidebarGroup>
@@ -92,6 +104,7 @@ export function AppSidebar() {
           </SidebarMenuButton>
         </div>
       </SidebarContent>
+      <SidebarRail />
     </Sidebar>
   );
 }

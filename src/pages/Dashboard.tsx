@@ -1,28 +1,69 @@
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { useEffect } from "react";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { authStorage } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Users, FileText, TrendingUp } from "lucide-react";
+import { Activity, Users, FileText, TrendingUp, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
-  const user = authStorage.getUser();
-
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <main className="flex-1 p-8 bg-gradient-to-br from-background via-secondary/10 to-background">
-          <div className="max-w-7xl mx-auto space-y-8">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                Welcome back, {user?.name}
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Here's what's happening with your account today.
-              </p>
-            </div>
+      <DashboardContent />
+    </SidebarProvider>
+  );
+}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+function DashboardContent() {
+  const user = authStorage.getUser();
+  const fallbackName = user?.email ? user.email.split("@")[0] : undefined;
+  const displayName = user?.name?.trim() || fallbackName || "there";
+  const { state, toggleSidebar } = useSidebar();
+  const isExpanded = state === "expanded";
+  const ToggleIcon = isExpanded ? PanelLeftClose : PanelLeftOpen;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.localStorage.getItem("justLoggedIn") !== "true") return;
+
+    toast({
+      title: `Welcome back, ${displayName}!`,
+      duration: 4000,
+      className: "shadow-xl border border-primary/10 bg-background/95",
+    });
+
+    window.localStorage.removeItem("justLoggedIn");
+  }, [displayName]);
+
+  return (
+    <div className="min-h-screen flex w-full">
+      <AppSidebar />
+      <main className="flex-1 p-8 bg-gradient-to-br from-background via-secondary/10 to-background">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 rounded-full border-primary/20 shadow-sm"
+                onClick={toggleSidebar}
+                aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+              >
+                <ToggleIcon className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">
+                  Welcome back, {displayName}
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  Here's what's happening with your account today.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -84,7 +125,7 @@ export default function Dashboard() {
               </Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
@@ -142,9 +183,8 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
-          </div>
-        </main>
-      </div>
-    </SidebarProvider>
+        </div>
+      </main>
+    </div>
   );
 }

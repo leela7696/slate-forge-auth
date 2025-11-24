@@ -91,7 +91,9 @@ export default function Auth() {
       if (response.success) {
         authStorage.setToken(response.token);
         authStorage.setUser(response.user);
-        toast.success("Welcome back!");
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("justLoggedIn", "true");
+        }
         navigate(response.redirectTo || "/dashboard");
       }
     } catch (error: any) {
