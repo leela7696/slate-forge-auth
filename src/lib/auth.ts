@@ -5,6 +5,10 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  phone?: string;
+  department?: string;
+  profile_picture_url?: string;
+  created_at?: string;
 }
 
 export const authStorage = {

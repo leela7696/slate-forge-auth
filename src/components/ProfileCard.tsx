@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Calendar, Phone, Briefcase } from "lucide-react";
@@ -12,6 +12,7 @@ interface ProfileCardProps {
     phone?: string;
     department?: string;
     created_at?: string;
+    profile_picture_url?: string;
   };
 }
 
@@ -30,6 +31,9 @@ export function ProfileCard({ user }: ProfileCardProps) {
       <CardContent className="p-8">
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
           <Avatar className="h-24 w-24 border-4 border-primary/20 shadow-xl">
+            {user.profile_picture_url && (
+              <AvatarImage src={user.profile_picture_url} alt={user.name} />
+            )}
             <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
               {getInitials(user.name)}
             </AvatarFallback>
