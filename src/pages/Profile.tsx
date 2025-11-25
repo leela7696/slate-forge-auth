@@ -10,11 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { authStorage, callEdgeFunction } from "@/lib/auth";
 import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
+import { TopNav } from "@/components/TopNav";
+import { ProfileCard } from "@/components/ProfileCard";
 import { ChangeEmailModal } from "@/components/ChangeEmailModal";
 import { ChangePasswordModal } from "@/components/ChangePasswordModal";
-import { Mail, Lock, User, Calendar } from "lucide-react";
-import { format } from "date-fns";
+import { Mail, Lock, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -25,10 +27,21 @@ const profileSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 
 export default function Profile() {
+  return (
+    <SidebarProvider>
+      <ProfileContent />
+    </SidebarProvider>
+  );
+}
+
+function ProfileContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [user, setUser] = useState(authStorage.getUser());
+  const { state, toggleSidebar } = useSidebar();
+  const isExpanded = state === "expanded";
+  const ToggleIcon = isExpanded ? PanelLeftClose : PanelLeftOpen;
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
@@ -76,19 +89,35 @@ export default function Profile() {
   };
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
+    <div className="min-h-screen flex w-full">
+      <AppSidebar />
+      <div className="flex flex-col flex-1 w-full">
+        <TopNav />
         <main className="flex-1 p-8 bg-gradient-to-br from-background via-secondary/10 to-background">
-          <div className="max-w-4xl mx-auto space-y-8">
-            <div>
-              <h1 className="text-3xl font-bold">Profile Settings</h1>
-              <p className="text-muted-foreground mt-1">Manage your account settings and personal information</p>
+          <div className="max-w-5xl mx-auto space-y-8">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 rounded-full border-primary/20 shadow-sm"
+                onClick={toggleSidebar}
+                aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+              >
+                <ToggleIcon className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold">Profile Settings</h1>
+                <p className="text-muted-foreground mt-1">Manage your account settings and personal information</p>
+              </div>
             </div>
 
+            {user && <ProfileCard user={user} />}
+
+            <Separator className="my-8" />
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="lg:col-span-2">
-                <CardHeader>
+              <Card className="lg:col-span-2 shadow-md">
+                <CardHeader className="bg-muted/30">
                   <CardTitle>Personal Information</CardTitle>
                   <CardDescription>Update your personal details here</CardDescription>
                 </CardHeader>
@@ -118,46 +147,16 @@ export default function Profile() {
                           </FormItem>
                         )} />
                       </div>
-                      <Button type="submit" disabled={isLoading}>{isLoading ? "Saving..." : "Save Changes"}</Button>
+                       <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+                         {isLoading ? "Saving..." : "Save Changes"}
+                       </Button>
                     </form>
                   </Form>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Account Status</CardTitle>
-                  <CardDescription>Your current account information</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Email</p>
-                      <p className="text-sm text-muted-foreground">{user?.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Role</p>
-                      <Badge variant="secondary">{user?.role}</Badge>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Member Since</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(user as any)?.created_at ? format(new Date((user as any).created_at), 'PPP') : 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
+              <Card className="shadow-md">
+                <CardHeader className="bg-muted/30">
                   <CardTitle>Security Settings</CardTitle>
                   <CardDescription>Manage your account security</CardDescription>
                 </CardHeader>
@@ -177,6 +176,6 @@ export default function Profile() {
 
       <ChangeEmailModal open={showEmailModal} onOpenChange={setShowEmailModal} currentEmail={user?.email || ""} onSuccess={fetchUserData} />
       <ChangePasswordModal open={showPasswordModal} onOpenChange={setShowPasswordModal} onSuccess={() => toast.success("Password changed successfully")} />
-    </SidebarProvider>
+    </div>
   );
 }
