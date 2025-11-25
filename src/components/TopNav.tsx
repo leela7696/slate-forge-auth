@@ -11,7 +11,6 @@ export function TopNav() {
             alt="Slate AI" 
             className="h-8 w-auto"
           />
-          <span className="font-semibold text-lg">Slate AI</span>
         </div>
         
         <div className="flex items-center gap-2">
