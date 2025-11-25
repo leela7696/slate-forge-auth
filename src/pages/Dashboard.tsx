@@ -38,10 +38,10 @@ function DashboardContent() {
   }, [displayName]);
 
   return (
-    <div className="min-h-screen flex flex-col w-full">
-      <TopNav />
-      <div className="flex flex-1">
-        <AppSidebar />
+    <div className="min-h-screen flex w-full">
+      <AppSidebar />
+      <div className="flex flex-col flex-1 w-full">
+        <TopNav />
         <main className="flex-1 p-8 bg-gradient-to-br from-background via-secondary/10 to-background">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -187,7 +187,7 @@ function DashboardContent() {
               </Card>
             </div>
         </div>
-      </main>
+        </main>
       </div>
     </div>
   );

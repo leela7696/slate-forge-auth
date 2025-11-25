@@ -45,7 +45,7 @@ export function AppSidebar() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <Sidebar className="w-64" collapsible="icon">
+    <Sidebar className="border-r" collapsible="icon">
       <SidebarContent>
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex flex-col items-center text-center gap-2">
