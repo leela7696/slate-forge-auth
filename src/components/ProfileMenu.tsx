@@ -47,7 +47,7 @@ export function ProfileMenu() {
           className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-primary/20 transition-all"
         >
           <Avatar className="h-10 w-10">
-            <AvatarImage src="" alt={user?.name || "User"} />
+            <AvatarImage src={user?.profile_picture_url || ""} alt={user?.name || "User"} />
             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
               {getInitials()}
             </AvatarFallback>
@@ -61,7 +61,7 @@ export function ProfileMenu() {
       >
         <div className="flex flex-col items-center gap-4 py-4">
           <Avatar className="h-20 w-20 border-2 border-primary/10">
-            <AvatarImage src="" alt={user?.name || "User"} />
+            <AvatarImage src={user?.profile_picture_url || ""} alt={user?.name || "User"} />
             <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
               {getInitials()}
             </AvatarFallback>
