@@ -49,10 +49,10 @@ serve(async (req) => {
       throw new Error('Invalid token payload');
     }
 
-    const { name, phone, department } = await req.json();
+    const { name, phone, department, profile_picture_url } = await req.json();
 
     // Validate input
-    if (!name || name.trim().length === 0) {
+    if (name !== undefined && (!name || name.trim().length === 0)) {
       return new Response(
         JSON.stringify({ error: 'Name is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -66,15 +66,20 @@ serve(async (req) => {
       );
     }
 
+    // Build update object with only provided fields
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (name !== undefined) updateData.name = name.trim();
+    if (phone !== undefined) updateData.phone = phone?.trim() || null;
+    if (department !== undefined) updateData.department = department?.trim() || null;
+    if (profile_picture_url !== undefined) updateData.profile_picture_url = profile_picture_url || null;
+
     // Update user profile
     const { data, error } = await supabase
       .from('users')
-      .update({
-        name: name.trim(),
-        phone: phone?.trim() || null,
-        department: department?.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', userId)
       .select()
       .single();
@@ -92,7 +97,7 @@ serve(async (req) => {
       actor_email: data.email,
       actor_role: data.role,
       success: true,
-      details: { updated_fields: { name, phone, department } },
+      details: { updated_fields: updateData },
     });
 
     console.log(`Profile updated successfully for user ${userId}`);

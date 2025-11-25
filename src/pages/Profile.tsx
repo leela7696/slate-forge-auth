@@ -13,6 +13,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { TopNav } from "@/components/TopNav";
 import { ProfileCard } from "@/components/ProfileCard";
+import { ProfilePictureUpload } from "@/components/ProfilePictureUpload";
 import { ChangeEmailModal } from "@/components/ChangeEmailModal";
 import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 import { Mail, Lock, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -68,6 +69,20 @@ function ProfileContent() {
     fetchUserData();
   }, []);
 
+  const handleProfilePictureUpdate = async (url: string) => {
+    try {
+      const result = await callEdgeFunction('update-profile', {
+        profile_picture_url: url,
+      });
+
+      const updatedUser = { ...user, ...result.user };
+      authStorage.setUser(updatedUser as any);
+      setUser(updatedUser as any);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update profile picture");
+    }
+  };
+
   const onSubmit = async (data: ProfileForm) => {
     setIsLoading(true);
     try {
@@ -115,7 +130,19 @@ function ProfileContent() {
 
             <Separator className="my-8" />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="shadow-md flex items-center justify-center">
+                <CardContent className="p-8">
+                  {user && (
+                    <ProfilePictureUpload
+                      currentImageUrl={user.profile_picture_url}
+                      userName={user.name}
+                      onUploadSuccess={handleProfilePictureUpdate}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+
               <Card className="lg:col-span-2 shadow-md">
                 <CardHeader className="bg-muted/30">
                   <CardTitle>Personal Information</CardTitle>
