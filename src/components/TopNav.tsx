@@ -9,7 +9,7 @@ export function TopNav() {
           <img 
             src="/slateai-logo.png" 
             alt="Slate AI" 
-            className="h-8 w-auto"
+            className="h-10 w-auto transition-transform duration-200 hover:scale-110 cursor-pointer"
           />
         </div>
         
