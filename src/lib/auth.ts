@@ -61,6 +61,9 @@ export const callEdgeFunction = async (
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // Check if body is FormData
+  const isFormData = body instanceof FormData;
+
   const { data, error } = await supabase.functions.invoke(functionName, {
     body,
     ...(Object.keys(headers).length > 0 && { headers }),

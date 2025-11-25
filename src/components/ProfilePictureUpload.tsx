@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Camera, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { callEdgeFunction } from "@/lib/auth";
 import { authStorage } from "@/lib/auth";
 
 interface ProfilePictureUploadProps {
@@ -53,32 +53,19 @@ export function ProfilePictureUpload({
       const user = authStorage.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Create a unique file name
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      // Create FormData to send the file
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('action', 'upload');
 
-      // Delete old profile picture if exists
-      if (currentImageUrl) {
-        const oldPath = currentImageUrl.split("/").slice(-2).join("/");
-        await supabase.storage.from("profile-pictures").remove([oldPath]);
+      // Call edge function to handle upload
+      const result = await callEdgeFunction('upload-profile-picture', formData);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Upload failed');
       }
 
-      // Upload new image
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("profile-pictures")
-        .upload(fileName, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("profile-pictures")
-        .getPublicUrl(uploadData.path);
-
-      const publicUrl = urlData.publicUrl;
+      const publicUrl = result.url;
 
       // Update preview
       setPreviewUrl(publicUrl);
@@ -106,9 +93,20 @@ export function ProfilePictureUpload({
       const user = authStorage.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Delete from storage
-      const oldPath = currentImageUrl.split("/").slice(-2).join("/");
-      await supabase.storage.from("profile-pictures").remove([oldPath]);
+      // Get file path from URL
+      const filePath = currentImageUrl.split("/").slice(-2).join("/");
+
+      // Create FormData for delete action
+      const formData = new FormData();
+      formData.append('action', 'delete');
+      formData.append('filePath', filePath);
+
+      // Call edge function to handle deletion
+      const result = await callEdgeFunction('upload-profile-picture', formData);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Delete failed');
+      }
 
       // Clear preview
       setPreviewUrl(undefined);
