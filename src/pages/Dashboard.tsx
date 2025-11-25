@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { TopNav } from "@/components/TopNav";
 import { authStorage } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Users, FileText, TrendingUp, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -37,9 +38,11 @@ function DashboardContent() {
   }, [displayName]);
 
   return (
-    <div className="min-h-screen flex w-full">
-      <AppSidebar />
-      <main className="flex-1 p-8 bg-gradient-to-br from-background via-secondary/10 to-background">
+    <div className="min-h-screen flex flex-col w-full">
+      <TopNav />
+      <div className="flex flex-1">
+        <AppSidebar />
+        <main className="flex-1 p-8 bg-gradient-to-br from-background via-secondary/10 to-background">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
@@ -185,6 +188,7 @@ function DashboardContent() {
             </div>
         </div>
       </main>
+      </div>
     </div>
   );
 }
