@@ -47,18 +47,6 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r" collapsible="icon">
       <SidebarContent>
-        <div className="p-4 border-b border-sidebar-border">
-          <div className="flex flex-col items-center text-center gap-2">
-            <img
-              src={isCollapsed ? "/favicon1.ico" : "/slateai-logo.png"}
-              alt="Slate AI Logo"
-              className={`transition-all duration-200 ${
-                isCollapsed ? "h-6 w-6 rounded-md" : "h-12 w-auto"
-              }`}
-            />
-          </div>
-        </div>
-
         <SidebarGroup>
           <SidebarGroupLabel>Main</SidebarGroupLabel>
           <SidebarGroupContent>
