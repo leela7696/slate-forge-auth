@@ -32,3 +32,21 @@ verify_jwt = false
 
 [functions.forgot-password]
 verify_jwt = false
+
+[functions.get-roles]
+verify_jwt = false
+
+[functions.manage-role]
+verify_jwt = false
+
+[functions.get-permissions]
+verify_jwt = false
+
+[functions.update-permissions]
+verify_jwt = false
+
+[functions.assign-user-role]
+verify_jwt = false
+
+[functions.get-users]
+verify_jwt = false
