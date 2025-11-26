@@ -10,6 +10,9 @@ import VerifyOtp from "./pages/auth/VerifyOtp";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import Users from "./pages/admin/Users";
+import AuditLogs from "./pages/admin/AuditLogs";
+import RBAC from "./pages/admin/RBAC";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +33,13 @@ const App = () => (
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
+          </Route>
+
+          {/* Admin Routes */}
+          <Route element={<ProtectedRoute requiredRoles={['Admin', 'System Admin']} />}>
+            <Route path="/admin/users" element={<Users />} />
+            <Route path="/admin/audit-logs" element={<AuditLogs />} />
+            <Route path="/admin/rbac" element={<RBAC />} />
           </Route>
 
           {/* Catch-all route */}

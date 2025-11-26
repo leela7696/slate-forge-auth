@@ -1,4 +1,4 @@
-import { LayoutDashboard, User, Users, FileText, LogOut } from "lucide-react";
+import { LayoutDashboard, User, Users, FileText, LogOut, Shield } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -29,10 +29,13 @@ export function AppSidebar() {
     { title: "Profile", url: "/profile", icon: User },
   ];
 
+  const isSystemAdmin = user && user.role === 'System Admin';
+  
   const adminItems = isAdmin
     ? [
         { title: "Users", url: "/admin/users", icon: Users },
         { title: "Audit Logs", url: "/admin/audit-logs", icon: FileText },
+        ...(isSystemAdmin ? [{ title: "RBAC", url: "/admin/rbac", icon: Shield }] : []),
       ]
     : [];
 
