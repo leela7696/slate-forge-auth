@@ -55,8 +55,7 @@ serve(async (req) => {
       );
     }
 
-    const url = new URL(req.url);
-    const roleId = url.searchParams.get('roleId');
+    const { roleId } = await req.json();
 
     if (!roleId) {
       return new Response(
