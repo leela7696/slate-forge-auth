@@ -58,6 +58,20 @@ serve(async (req) => {
     const { method, roleId, name, description } = await req.json();
 
     if (method === 'CREATE') {
+      // Check if role name already exists
+      const { data: existingRole } = await supabaseAdmin
+        .from('roles')
+        .select('id')
+        .eq('name', name)
+        .maybeSingle();
+
+      if (existingRole) {
+        return new Response(
+          JSON.stringify({ error: 'A role with this name already exists' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const { data, error } = await supabaseAdmin
         .from('roles')
         .insert({ name, description })
@@ -85,6 +99,21 @@ serve(async (req) => {
     }
 
     if (method === 'UPDATE') {
+      // Check if another role with the same name exists (excluding current role)
+      const { data: existingRole } = await supabaseAdmin
+        .from('roles')
+        .select('id')
+        .eq('name', name)
+        .neq('id', roleId)
+        .maybeSingle();
+
+      if (existingRole) {
+        return new Response(
+          JSON.stringify({ error: 'A role with this name already exists' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const { data, error } = await supabaseAdmin
         .from('roles')
         .update({ name, description })
