@@ -8,22 +8,27 @@ export default function Index() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-md bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-4 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <span><img src="/slateai-logo.png" alt="Slate AI Logo" className="w-25 h-14" /></span>
-          </div>  
-          <div className="flex gap-3">
-            <Link to="/auth">
-              <Button variant="ghost" className="text-base">Log In</Button>
-            </Link>
-            <Link to="/auth">
-              <Button className="text-base gap-2">
-                Get Started <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+  <div className="container mx-auto px-4 lg:px-8 py-2 flex justify-between items-center">
+    <div className="flex items-center gap-3">
+      <span>
+        <img src="/slateai-logo.png" alt="Slate AI Logo" className="w-26 h-16" />
+      </span>
+    </div>
+    <div className="flex gap-3">
+      <Link to="/auth">
+        <Button variant="ghost" className="text-base">
+          Log In
+        </Button>
+      </Link>
+      <Link to="/auth">
+        <Button className="text-base gap-2">
+          Get Started <ArrowRight className="w-4 h-4" />
+        </Button>
+      </Link>
+    </div>
+  </div>
+</header>
+
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 lg:px-8 pt-24 pb-32">
@@ -178,7 +183,7 @@ export default function Index() {
               <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold">S</span>
               </div>
-              <span className="text-lg font-bold">Slate AI</span>
+              <span><img src="/slateai-logo.png" alt="Slate AI Logo" className="w-26 h-16" /></span>
             </div>
             <p className="text-muted-foreground">&copy; 2025 Slate AI. All rights reserved.</p>
           </div>
