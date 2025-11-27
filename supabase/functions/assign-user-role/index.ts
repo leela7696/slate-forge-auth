@@ -64,9 +64,14 @@ serve(async (req) => {
       );
     }
 
-    // Validate role is one of the valid app_role enum values
-    const validRoles = ['System Admin', 'Admin', 'Manager', 'User'];
-    if (!validRoles.includes(role)) {
+    // Validate role exists in the roles table
+    const { data: roleExists } = await supabaseAdmin
+      .from('roles')
+      .select('id')
+      .eq('name', role)
+      .single();
+
+    if (!roleExists) {
       return new Response(
         JSON.stringify({ error: 'Invalid role' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
