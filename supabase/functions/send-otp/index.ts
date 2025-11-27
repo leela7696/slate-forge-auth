@@ -72,11 +72,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check if email already exists
+    // Check if email already exists (excluding deleted users)
     const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('id, status')
       .eq('email', email.toLowerCase())
+      .eq('is_deleted', false)
       .maybeSingle();
 
     if (existingUser && existingUser.status === 'active') {
