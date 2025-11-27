@@ -1,13 +1,9 @@
 import { 
   LayoutDashboard, 
-  Sprout, 
-  Map, 
-  Calendar, 
   BarChart3, 
   FileText, 
   Users, 
-  Settings, 
-  MessageSquare,
+  Settings,
   LucideIcon
 } from "lucide-react";
 
@@ -16,7 +12,7 @@ export interface AppItem {
   icon: LucideIcon;
   route: string;
   description?: string;
-  requiredRoles?: string[];
+  requiredModule?: string;
 }
 
 export const apps: AppItem[] = [
@@ -25,54 +21,48 @@ export const apps: AppItem[] = [
     icon: LayoutDashboard,
     route: "/dashboard",
     description: "Overview and analytics",
+    requiredModule: "Dashboard",
   },
   {
-    name: "Crop Monitoring",
-    icon: Sprout,
-    route: "/crop-monitoring",
-    description: "Track crop health",
+    name: "Profile",
+    icon: Users,
+    route: "/profile",
+    description: "Manage your profile",
+    requiredModule: "Profile",
   },
   {
-    name: "Field Mapping",
-    icon: Map,
-    route: "/field-mapping",
-    description: "Manage field layouts",
+    name: "User Management",
+    icon: Users,
+    route: "/admin/users",
+    description: "Manage users",
+    requiredModule: "User Management",
   },
   {
-    name: "Scheduling",
-    icon: Calendar,
-    route: "/scheduling",
-    description: "Plan activities",
+    name: "Audit Logs",
+    icon: FileText,
+    route: "/admin/audit-logs",
+    description: "System activity",
+    requiredModule: "Audit Logs",
+  },
+  {
+    name: "RBAC",
+    icon: Settings,
+    route: "/admin/rbac",
+    description: "Role management",
+    requiredModule: "RBAC",
   },
   {
     name: "Analytics",
     icon: BarChart3,
     route: "/analytics",
     description: "Data insights",
-  },
-  {
-    name: "Audit Logs",
-    icon: FileText,
-    route: "/audit-logs",
-    description: "System activity",
-  },
-  {
-    name: "User Management",
-    icon: Users,
-    route: "/user-management",
-    description: "Manage users",
-    requiredRoles: ["System Admin", "Admin"],
+    requiredModule: "Analytics",
   },
   {
     name: "Settings",
     icon: Settings,
     route: "/settings",
     description: "Configure system",
-  },
-  {
-    name: "Support",
-    icon: MessageSquare,
-    route: "/support",
-    description: "Get help",
+    requiredModule: "Settings",
   },
 ];
