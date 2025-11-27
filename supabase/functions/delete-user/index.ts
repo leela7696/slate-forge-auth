@@ -55,57 +55,64 @@ serve(async (req) => {
       );
     }
 
-    // Get query parameters for filtering and pagination
-    const url = new URL(req.url);
-    const search = url.searchParams.get('search') || '';
-    const roleFilter = url.searchParams.get('role') || '';
-    const statusFilter = url.searchParams.get('status') || '';
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const limit = parseInt(url.searchParams.get('limit') || '10');
-    const offset = (page - 1) * limit;
+    const { userId } = await req.json();
 
-    // Build query
-    let query = supabaseAdmin
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'userId is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get target user info for audit
+    const { data: targetUser } = await supabaseAdmin
       .from('users')
-      .select('id, name, email, role, phone, department, status, last_login_at, created_at, profile_picture_url', { count: 'exact' })
-      .eq('is_deleted', false);
+      .select('email, role, name')
+      .eq('id', userId)
+      .single();
 
-    // Apply search filter
-    if (search) {
-      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+    if (!targetUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Apply role filter
-    if (roleFilter) {
-      query = query.eq('role', roleFilter);
-    }
-
-    // Apply status filter
-    if (statusFilter) {
-      query = query.eq('status', statusFilter);
-    }
-
-    // Apply pagination and ordering
-    query = query
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    const { data: users, error, count } = await query;
+    // Soft delete user
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update({ 
+        is_deleted: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
 
     if (error) throw error;
 
+    // Log audit
+    await supabaseAdmin.from('audit_logs').insert({
+      action: 'USER_DELETED',
+      module: 'user_management',
+      actor_id: payload.userId,
+      actor_email: payload.email,
+      actor_role: user.role,
+      target_id: userId,
+      success: true,
+      details: { 
+        target_email: targetUser.email,
+        target_role: targetUser.role,
+        target_name: targetUser.name
+      },
+      ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+      user_agent: req.headers.get('user-agent') || 'unknown',
+    });
+
     return new Response(
-      JSON.stringify({ 
-        users: users || [], 
-        total: count || 0,
-        page,
-        limit,
-        totalPages: Math.ceil((count || 0) / limit)
-      }),
+      JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('Error in get-users:', error);
+    console.error('Error in delete-user:', error);
     return new Response(
       JSON.stringify({ error: error?.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
