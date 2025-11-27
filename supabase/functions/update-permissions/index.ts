@@ -19,6 +19,42 @@ async function verifyToken(token: string) {
   return await verify(token, key);
 }
 
+async function checkPermission(supabase: any, userId: string, module: string, action: string) {
+  const { data: user } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single();
+
+  if (!user) return false;
+
+  const { data: role } = await supabase
+    .from('roles')
+    .select('id')
+    .eq('name', user.role)
+    .single();
+
+  if (!role) return false;
+
+  const { data: permission } = await supabase
+    .from('permissions')
+    .select('*')
+    .eq('role_id', role.id)
+    .eq('module', module)
+    .single();
+
+  if (!permission) return false;
+
+  const actionMap: Record<string, string> = {
+    view: 'can_view',
+    create: 'can_create',
+    edit: 'can_edit',
+    delete: 'can_delete',
+  };
+
+  return permission[actionMap[action]] === true;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -41,16 +77,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Only System Admin can update permissions
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('id', payload.userId)
-      .single();
-
-    if (!user || user.role !== 'System Admin') {
+    // Check if user has permission to edit RBAC
+    const hasEditPermission = await checkPermission(supabaseAdmin, payload.userId, 'RBAC', 'edit');
+    if (!hasEditPermission) {
       return new Response(
-        JSON.stringify({ error: 'Only System Admin can update permissions' }),
+        JSON.stringify({ error: 'You do not have permission to update permissions' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -89,12 +120,19 @@ serve(async (req) => {
       }
     }
 
+    // Get user role for audit log
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('id', payload.userId)
+      .single();
+
     await supabaseAdmin.from('audit_logs').insert({
       action: 'PERMISSIONS_UPDATED',
       module: 'rbac',
       actor_id: payload.userId,
       actor_email: payload.email,
-      actor_role: user.role,
+      actor_role: user?.role || 'unknown',
       success: true,
       details: { role_id: roleId, permissions_count: permissions.length },
       ip_address: req.headers.get('x-forwarded-for') || 'unknown',
