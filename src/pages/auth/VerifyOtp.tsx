@@ -64,6 +64,8 @@ export default function VerifyOtp() {
       if (response.success) {
         authStorage.setToken(response.token);
         authStorage.setUser(response.user);
+        // Clear permissions cache to fetch fresh permissions after signup
+        localStorage.removeItem('user_permissions_cache');
         toast.success("Account verified successfully!");
         navigate(response.redirectTo || "/dashboard");
       }
