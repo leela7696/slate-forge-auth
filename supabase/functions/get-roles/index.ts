@@ -41,20 +41,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Verify user has admin access
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('id', payload.userId)
-      .single();
-
-    if (!user || !['Admin', 'System Admin'].includes(user.role)) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
+    // All authenticated users can view roles (needed for permissions lookup)
     // Get all roles with user count
     const { data: roles, error } = await supabaseAdmin
       .from('roles')
