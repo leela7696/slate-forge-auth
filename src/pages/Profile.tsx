@@ -16,6 +16,8 @@ import { ProfileCard } from "@/components/ProfileCard";
 import { ProfilePictureUpload } from "@/components/ProfilePictureUpload";
 import { ChangeEmailModal } from "@/components/ChangeEmailModal";
 import { ChangePasswordModal } from "@/components/ChangePasswordModal";
+import { ProfileCompletionBar } from "@/components/ProfileCompletionBar";
+import { calculateProfileCompletion } from "@/lib/profile-completion";
 import { Mail, Lock, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
@@ -43,6 +45,7 @@ function ProfileContent() {
   const { state, toggleSidebar } = useSidebar();
   const isExpanded = state === "expanded";
   const ToggleIcon = isExpanded ? PanelLeftClose : PanelLeftOpen;
+  const profileCompletion = calculateProfileCompletion(user);
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
@@ -127,6 +130,8 @@ function ProfileContent() {
             </div>
 
             {user && <ProfileCard user={user} />}
+            
+            <ProfileCompletionBar completion={profileCompletion} />
 
             <Separator className="my-8" />
 

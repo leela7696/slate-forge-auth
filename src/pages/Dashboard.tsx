@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopNav } from "@/components/TopNav";
@@ -7,6 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Users, FileText, TrendingUp, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
+import { ProfileCompletionModal } from "@/components/ProfileCompletionModal";
+import { ProfileCompletionReminder } from "@/components/ProfileCompletionReminder";
+import { calculateProfileCompletion, shouldShowProfileCompletionPopup } from "@/lib/profile-completion";
 
 export default function Dashboard() {
   return (
@@ -23,6 +26,9 @@ function DashboardContent() {
   const { state, toggleSidebar } = useSidebar();
   const isExpanded = state === "expanded";
   const ToggleIcon = isExpanded ? PanelLeftClose : PanelLeftOpen;
+  
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const profileCompletion = calculateProfileCompletion(user);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -35,6 +41,11 @@ function DashboardContent() {
     });
 
     window.localStorage.removeItem("justLoggedIn");
+    
+    // Show profile completion modal if needed
+    if (!profileCompletion.isComplete && shouldShowProfileCompletionPopup()) {
+      setTimeout(() => setShowProfileModal(true), 500);
+    }
   }, [displayName]);
 
   return (
@@ -65,6 +76,10 @@ function DashboardContent() {
               </div>
             </div>
           </div>
+
+          {!profileCompletion.isComplete && shouldShowProfileCompletionPopup() === false && (
+            <ProfileCompletionReminder completion={profileCompletion} />
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
@@ -189,6 +204,11 @@ function DashboardContent() {
         </div>
         </main>
       </div>
+      
+      <ProfileCompletionModal 
+        open={showProfileModal} 
+        onOpenChange={setShowProfileModal} 
+      />
     </div>
   );
 }
