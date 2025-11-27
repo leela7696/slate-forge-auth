@@ -66,7 +66,20 @@ serve(async (req) => {
 
     console.log('Attempting to assign role:', role, 'to user:', userId);
 
-    // Validate role exists in roles table (supports custom roles)
+    // Only allow roles that are valid in the users.role enum
+    const builtIn = ['System Admin', 'Admin', 'Manager', 'User'];
+    if (!builtIn.includes(role)) {
+      console.error('Invalid role attempted for users.role enum:', role, 'Valid roles:', builtIn);
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid role',
+          details: `Role "${role}" cannot be assigned. Valid roles: ${builtIn.join(', ')}`,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Optional: still check that the role exists in roles table for consistency/logging
     const { data: roleRow, error: roleError } = await supabaseAdmin
       .from('roles')
       .select('id, name')
@@ -78,18 +91,7 @@ serve(async (req) => {
     }
 
     if (!roleRow) {
-      // Backward compatibility: allow built-in roles if not present in table
-      const builtIn = ['System Admin', 'Admin', 'Manager', 'User'];
-      if (!builtIn.includes(role)) {
-        console.error('Invalid role attempted:', role, 'Valid built-in roles:', builtIn);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Invalid role', 
-            details: `Role "${role}" not found. Valid roles: ${builtIn.join(', ')}` 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      console.warn('Role not found in roles table but is allowed enum value:', role);
     }
 
     // Get target user info
