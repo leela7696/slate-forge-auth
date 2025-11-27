@@ -37,6 +37,7 @@ import { format } from "date-fns";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { AddUserModal } from "@/components/admin/AddUserModal";
 import { EditUserModal } from "@/components/admin/EditUserModal";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface User {
   id: string;
@@ -67,6 +68,8 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  
+  const { hasPermission } = usePermissions();
 
   useEffect(() => {
     fetchRoles();
@@ -107,6 +110,10 @@ export default function Users() {
   };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
+    if (!hasPermission('User Management', 'edit')) {
+      toast.error("You don't have permission to change user roles");
+      return;
+    }
     try {
       await callEdgeFunction("assign-user-role", { userId, role: newRole });
       toast.success("User role updated successfully");
@@ -117,6 +124,10 @@ export default function Users() {
   };
 
   const handleStatusToggle = async (userId: string, currentStatus: string) => {
+    if (!hasPermission('User Management', 'edit')) {
+      toast.error("You don't have permission to change user status");
+      return;
+    }
     const newStatus = currentStatus === "active" ? "inactive" : "active";
     try {
       await callEdgeFunction("toggle-user-status", { userId, status: newStatus });
@@ -129,6 +140,12 @@ export default function Users() {
 
   const handleDelete = async () => {
     if (!userToDelete) return;
+    if (!hasPermission('User Management', 'delete')) {
+      toast.error("You don't have permission to delete users");
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      return;
+    }
     try {
       await callEdgeFunction("delete-user", { userId: userToDelete });
       toast.success("User deleted successfully");
@@ -187,7 +204,10 @@ export default function Users() {
                     Manage users and assign roles across your organization
                   </p>
                 </div>
-                <Button onClick={() => setAddModalOpen(true)}>
+                <Button 
+                  onClick={() => setAddModalOpen(true)}
+                  disabled={!hasPermission('User Management', 'create')}
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Add User
                 </Button>
@@ -279,6 +299,7 @@ export default function Users() {
                           <Select
                             value={user.role}
                             onValueChange={(value) => handleRoleChange(user.id, value)}
+                            disabled={!hasPermission('User Management', 'edit')}
                           >
                             <SelectTrigger className="w-40">
                               <SelectValue />
@@ -299,6 +320,7 @@ export default function Users() {
                           <button
                             onClick={() => handleStatusToggle(user.id, user.status)}
                             className="cursor-pointer"
+                            disabled={!hasPermission('User Management', 'edit')}
                           >
                             <Badge variant={getStatusBadgeVariant(user.status)}>
                               {user.status}
@@ -319,6 +341,7 @@ export default function Users() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleEdit(user)}
+                              disabled={!hasPermission('User Management', 'edit')}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -329,6 +352,7 @@ export default function Users() {
                                 setUserToDelete(user.id);
                                 setDeleteDialogOpen(true);
                               }}
+                              disabled={!hasPermission('User Management', 'delete')}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
