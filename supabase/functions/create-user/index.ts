@@ -19,6 +19,15 @@ async function verifyToken(token: string) {
   return await verify(token, key);
 }
 
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -41,25 +50,25 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Only Admin and System Admin can assign roles
-    const { data: user } = await supabaseAdmin
+    // Only Admin and System Admin can create users
+    const { data: actor } = await supabaseAdmin
       .from('users')
-      .select('role')
+      .select('role, email')
       .eq('id', payload.userId)
       .single();
 
-    if (!user || !['Admin', 'System Admin'].includes(user.role)) {
+    if (!actor || !['Admin', 'System Admin'].includes(actor.role)) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { userId, role } = await req.json();
+    const { name, email, password, role, status } = await req.json();
 
-    if (!userId || !role) {
+    if (!name || !email || !password || !role || !status) {
       return new Response(
-        JSON.stringify({ error: 'userId and role are required' }),
+        JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -72,7 +81,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (!roleRow) {
-      // Backward compatibility: allow built-in roles if not present in table
       const builtIn = ['System Admin', 'Admin', 'Manager', 'User'];
       if (!builtIn.includes(role)) {
         return new Response(
@@ -82,53 +90,70 @@ serve(async (req) => {
       }
     }
 
-    // Get target user info
-    const { data: targetUser } = await supabaseAdmin
-      .from('users')
-      .select('email, role')
-      .eq('id', userId)
-      .single();
-
-    if (!targetUser) {
+    const validStatuses = ['active', 'inactive'];
+    if (!validStatuses.includes(status)) {
       return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Invalid status' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update user role
-    const { data, error } = await supabaseAdmin
+    // Check if email already exists (non-deleted)
+    const { data: existing } = await supabaseAdmin
       .from('users')
-      .update({ role, updated_at: new Date().toISOString() })
-      .eq('id', userId)
-      .select()
+      .select('id')
+      .eq('email', email.toLowerCase())
+      .eq('is_deleted', false)
+      .maybeSingle();
+
+    if (existing) {
+      return new Response(
+        JSON.stringify({ error: 'Email already exists' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const password_hash = await hashPassword(password);
+
+    const { data: newUser, error } = await supabaseAdmin
+      .from('users')
+      .insert({
+        name,
+        email: email.toLowerCase(),
+        password_hash,
+        role,
+        status,
+        is_deleted: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select('*')
       .single();
 
     if (error) throw error;
 
     await supabaseAdmin.from('audit_logs').insert({
-      action: 'USER_ROLE_CHANGED',
-      module: 'rbac',
+      action: 'USER_CREATED',
+      module: 'users',
       actor_id: payload.userId,
-      actor_email: payload.email,
-      actor_role: user.role,
-      target_id: userId,
+      actor_email: actor.email,
+      actor_role: actor.role,
+      target_id: newUser.id,
+      target_type: 'user',
       success: true,
-      details: { 
-        target_email: targetUser.email,
-        old_role: targetUser.role,
-        new_role: role 
-      },
+      details: { target_email: newUser.email, role: newUser.role, status: newUser.status },
       ip_address: req.headers.get('x-forwarded-for') || 'unknown',
       user_agent: req.headers.get('user-agent') || 'unknown',
     });
 
+    // Optional invitation email can be handled by another function; placeholder
+
     return new Response(
-      JSON.stringify({ success: true, user: data }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: true, user: newUser }),
+      { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('Error in assign-user-role:', error);
+    console.error('Error in create-user:', error);
     return new Response(
       JSON.stringify({ error: error?.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

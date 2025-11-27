@@ -41,51 +41,82 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Only Admin and System Admin can assign roles
-    const { data: user } = await supabaseAdmin
+    // Only Admin and System Admin can update users
+    const { data: actor } = await supabaseAdmin
       .from('users')
-      .select('role')
+      .select('role, email')
       .eq('id', payload.userId)
       .single();
 
-    if (!user || !['Admin', 'System Admin'].includes(user.role)) {
+    if (!actor || !['Admin', 'System Admin'].includes(actor.role)) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { userId, role } = await req.json();
+    const { userId, name, email, role, status } = await req.json();
 
-    if (!userId || !role) {
+    if (!userId) {
       return new Response(
-        JSON.stringify({ error: 'userId and role are required' }),
+        JSON.stringify({ error: 'userId is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate role exists in roles table (supports custom roles)
-    const { data: roleRow } = await supabaseAdmin
-      .from('roles')
-      .select('id, name')
-      .eq('name', role)
-      .maybeSingle();
+    const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (name) updates.name = name;
+    if (email) updates.email = String(email).toLowerCase();
+    if (role) {
+      // Validate role exists in roles table (supports custom roles)
+      const { data: roleRow } = await supabaseAdmin
+        .from('roles')
+        .select('id, name')
+        .eq('name', role)
+        .maybeSingle();
 
-    if (!roleRow) {
-      // Backward compatibility: allow built-in roles if not present in table
-      const builtIn = ['System Admin', 'Admin', 'Manager', 'User'];
-      if (!builtIn.includes(role)) {
+      if (!roleRow) {
+        const builtIn = ['System Admin', 'Admin', 'Manager', 'User'];
+        if (!builtIn.includes(role)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid role: not found' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+      updates.role = role;
+    }
+    if (status) {
+      const validStatuses = ['active', 'inactive'];
+      if (!validStatuses.includes(status)) {
         return new Response(
-          JSON.stringify({ error: 'Invalid role: not found' }),
+          JSON.stringify({ error: 'Invalid status' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      updates.status = status;
+    }
+
+    // Email uniqueness check if changing email
+    if (updates.email) {
+      const { data: existing } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', updates.email)
+        .eq('is_deleted', false)
+        .neq('id', userId)
+        .maybeSingle();
+      if (existing) {
+        return new Response(
+          JSON.stringify({ error: 'Email already in use' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
 
-    // Get target user info
     const { data: targetUser } = await supabaseAdmin
       .from('users')
-      .select('email, role')
+      .select('id, email, role, status')
       .eq('id', userId)
       .single();
 
@@ -96,39 +127,35 @@ serve(async (req) => {
       );
     }
 
-    // Update user role
-    const { data, error } = await supabaseAdmin
+    const { data: updated, error } = await supabaseAdmin
       .from('users')
-      .update({ role, updated_at: new Date().toISOString() })
+      .update(updates)
       .eq('id', userId)
-      .select()
+      .select('*')
       .single();
 
     if (error) throw error;
 
     await supabaseAdmin.from('audit_logs').insert({
-      action: 'USER_ROLE_CHANGED',
-      module: 'rbac',
+      action: 'USER_UPDATED',
+      module: 'users',
       actor_id: payload.userId,
-      actor_email: payload.email,
-      actor_role: user.role,
+      actor_email: actor.email,
+      actor_role: actor.role,
       target_id: userId,
+      target_type: 'user',
       success: true,
-      details: { 
-        target_email: targetUser.email,
-        old_role: targetUser.role,
-        new_role: role 
-      },
+      details: { before: targetUser, after: { email: updated.email, role: updated.role, status: updated.status } },
       ip_address: req.headers.get('x-forwarded-for') || 'unknown',
       user_agent: req.headers.get('user-agent') || 'unknown',
     });
 
     return new Response(
-      JSON.stringify({ success: true, user: data }),
+      JSON.stringify({ success: true, user: updated }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('Error in assign-user-role:', error);
+    console.error('Error in update-user:', error);
     return new Response(
       JSON.stringify({ error: error?.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -55,16 +55,68 @@ serve(async (req) => {
       );
     }
 
-    const { data: users, error } = await supabaseAdmin
+    // Parse filters from query params (GET) or JSON body (POST)
+    const url = new URL(req.url);
+    let search = url.searchParams.get('search') || '';
+    let role = url.searchParams.get('role') || '';
+    let status = url.searchParams.get('status') || '';
+    let page = parseInt(url.searchParams.get('page') || '1', 10);
+    let limit = parseInt(url.searchParams.get('limit') || '10', 10);
+
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        search = body?.search ?? search;
+        role = body?.role ?? role;
+        status = body?.status ?? status;
+        page = parseInt(String(body?.page ?? page), 10);
+        limit = parseInt(String(body?.limit ?? limit), 10);
+      } catch (_) {
+        // ignore body parse errors
+      }
+    }
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let baseQuery = supabaseAdmin
       .from('users')
-      .select('id, name, email, role, phone, department, status, last_login_at, created_at, profile_picture_url')
-      .eq('is_deleted', false)
-      .order('created_at', { ascending: false });
+      .select('id, name, email, role, phone, department, status, last_login_at, created_at, profile_picture_url', { count: 'exact' })
+      .eq('is_deleted', false);
+
+    if (role) {
+      baseQuery = baseQuery.eq('role', role);
+    }
+
+    if (status) {
+      baseQuery = baseQuery.eq('status', status);
+    }
+
+    if (search) {
+      // Search by name or email
+      baseQuery = baseQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+
+    // Get total count
+    const { count: totalCount, error: countError } = await baseQuery
+      .select('*', { count: 'exact', head: true });
+
+    if (countError) throw countError;
+
+    // Fetch paginated data
+    const { data: users, error } = await baseQuery
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (error) throw error;
 
     return new Response(
-      JSON.stringify({ users: users || [] }),
+      JSON.stringify({ 
+        users: users || [],
+        page,
+        limit,
+        total: totalCount || 0
+      }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
