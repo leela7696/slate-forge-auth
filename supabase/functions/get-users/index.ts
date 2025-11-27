@@ -57,9 +57,9 @@ serve(async (req) => {
 
     // Get query parameters for filtering and pagination
     const url = new URL(req.url);
-    const search = url.searchParams.get('search') || '';
-    const roleFilter = url.searchParams.get('role') || '';
-    const statusFilter = url.searchParams.get('status') || '';
+    const search = (url.searchParams.get('search') || '').trim();
+    const roleFilter = (url.searchParams.get('role') || '').trim();
+    const statusFilter = (url.searchParams.get('status') || '').trim();
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const offset = (page - 1) * limit;
