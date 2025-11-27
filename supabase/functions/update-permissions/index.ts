@@ -77,8 +77,21 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check if user has permission to edit RBAC
-    const hasEditPermission = await checkPermission(supabaseAdmin, payload.userId, 'RBAC', 'edit');
+    // Load user to check role and permissions
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('id', payload.userId)
+      .single();
+
+    // Allow System Admin by role, otherwise require RBAC edit permission
+    let hasEditPermission = false;
+    if (user && user.role === 'System Admin') {
+      hasEditPermission = true;
+    } else {
+      hasEditPermission = await checkPermission(supabaseAdmin, payload.userId, 'RBAC', 'edit');
+    }
+
     if (!hasEditPermission) {
       return new Response(
         JSON.stringify({ error: 'You do not have permission to update permissions' }),
@@ -121,7 +134,7 @@ serve(async (req) => {
     }
 
     // Get user role for audit log
-    const { data: user } = await supabaseAdmin
+    const { data: auditUser } = await supabaseAdmin
       .from('users')
       .select('role')
       .eq('id', payload.userId)
@@ -132,7 +145,7 @@ serve(async (req) => {
       module: 'rbac',
       actor_id: payload.userId,
       actor_email: payload.email,
-      actor_role: user?.role || 'unknown',
+      actor_role: auditUser?.role || 'unknown',
       success: true,
       details: { role_id: roleId, permissions_count: permissions.length },
       ip_address: req.headers.get('x-forwarded-for') || 'unknown',
