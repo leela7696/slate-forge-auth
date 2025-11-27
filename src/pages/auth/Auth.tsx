@@ -91,6 +91,8 @@ export default function Auth() {
       if (response.success) {
         authStorage.setToken(response.token);
         authStorage.setUser(response.user);
+        // Clear permissions cache to fetch fresh permissions on login
+        localStorage.removeItem('user_permissions_cache');
         if (typeof window !== "undefined") {
           window.localStorage.setItem("justLoggedIn", "true");
         }

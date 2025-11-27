@@ -50,6 +50,10 @@ export const authHelpers = {
     // Clear permissions cache
     localStorage.removeItem('user_permissions_cache');
   },
+  
+  clearPermissionsCache: (): void => {
+    localStorage.removeItem('user_permissions_cache');
+  },
 };
 
 export const callEdgeFunction = async (
