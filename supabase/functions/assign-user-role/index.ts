@@ -64,19 +64,29 @@ serve(async (req) => {
       );
     }
 
+    console.log('Attempting to assign role:', role, 'to user:', userId);
+
     // Validate role exists in roles table (supports custom roles)
-    const { data: roleRow } = await supabaseAdmin
+    const { data: roleRow, error: roleError } = await supabaseAdmin
       .from('roles')
       .select('id, name')
       .eq('name', role)
       .maybeSingle();
 
+    if (roleError) {
+      console.error('Error checking roles table:', roleError);
+    }
+
     if (!roleRow) {
       // Backward compatibility: allow built-in roles if not present in table
       const builtIn = ['System Admin', 'Admin', 'Manager', 'User'];
       if (!builtIn.includes(role)) {
+        console.error('Invalid role attempted:', role, 'Valid built-in roles:', builtIn);
         return new Response(
-          JSON.stringify({ error: 'Invalid role: not found' }),
+          JSON.stringify({ 
+            error: 'Invalid role', 
+            details: `Role "${role}" not found. Valid roles: ${builtIn.join(', ')}` 
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
