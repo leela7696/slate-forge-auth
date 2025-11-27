@@ -70,14 +70,34 @@ export default function VerifyOtp() {
         navigate(response.redirectTo || "/dashboard");
       }
     } catch (error: any) {
-      if (error.error === "INVALID_OTP") {
-        toast.error("Orang-otap");
-      } else if (error.error === "OTP_EXPIRED") {
+      const rawMsg = error?.message || "Verification failed";
+      const status = error?.context?.status;
+      const body = error?.context?.body;
+
+      if (error?.error === "INVALID_OTP") {
+        toast.error("Wrong OTP. Please check and try again.");
+      } else if (error?.error === "OTP_EXPIRED") {
         toast.error("Code expired. Please request a new one.");
-      } else if (error.error === "OTP_LOCKED") {
+      } else if (error?.error === "OTP_LOCKED") {
         toast.error("Too many failed attempts. Please start signup again.");
+      } else if (/non-2xx/i.test(rawMsg)) {
+        // Supabase generic error: try to parse response body and default to Wrong otp. Please try again. for 400s
+        let message = "Wrong otp. Please try again.";
+        if (status === 400 || !status) {
+          try {
+            const parsed = typeof body === "string" ? JSON.parse(body) : undefined;
+            if (parsed?.error === "INVALID_OTP") message = "Wrong otp. Please try again.";
+            else if (typeof parsed?.error === "string") message = parsed.error;
+            else if (typeof parsed?.message === "string") message = parsed.message;
+          } catch {
+            // keep default Wrong otp. Please try again.
+          }
+        } else {
+          message = rawMsg;
+        }
+        toast.error(message);
       } else {
-        toast.error(error.message || "Verification failed");
+        toast.error(rawMsg);
       }
     } finally {
       setIsLoading(false);
