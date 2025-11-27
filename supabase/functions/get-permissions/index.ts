@@ -77,8 +77,21 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check if user has permission to view RBAC
-    const hasViewPermission = await checkPermission(supabaseAdmin, payload.userId, 'RBAC', 'view');
+    // Load user to check role and permissions
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('id', payload.userId)
+      .single();
+
+    // Allow System Admin by role, otherwise require RBAC view permission
+    let hasViewPermission = false;
+    if (user && user.role === 'System Admin') {
+      hasViewPermission = true;
+    } else {
+      hasViewPermission = await checkPermission(supabaseAdmin, payload.userId, 'RBAC', 'view');
+    }
+
     if (!hasViewPermission) {
       return new Response(
         JSON.stringify({ error: 'You do not have permission to view permissions' }),
