@@ -50,3 +50,15 @@ verify_jwt = false
 
 [functions.get-users]
 verify_jwt = false
+
+[functions.create-user]
+verify_jwt = false
+
+[functions.update-user]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.toggle-user-status]
+verify_jwt = false
