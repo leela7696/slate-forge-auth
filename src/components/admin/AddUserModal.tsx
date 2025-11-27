@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +13,9 @@ interface AddUserModalProps {
   onSuccess: () => void;
 }
 
-const roles = ["System Admin", "Admin", "Manager", "User"];
-
 export function AddUserModal({ open, onOpenChange, onSuccess }: AddUserModalProps) {
   const [loading, setLoading] = useState(false);
+  const [roles, setRoles] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -24,6 +23,21 @@ export function AddUserModal({ open, onOpenChange, onSuccess }: AddUserModalProp
     role: "User",
     status: "active",
   });
+
+  useEffect(() => {
+    fetchRoles();
+  }, []);
+
+  const fetchRoles = async () => {
+    try {
+      const data = await callEdgeFunction("get-roles");
+      setRoles(data.roles.map((r: any) => r.name));
+    } catch (error: any) {
+      console.error("Failed to fetch roles:", error);
+      // Fallback to default roles
+      setRoles(["System Admin", "Admin", "Manager", "User"]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +108,7 @@ export function AddUserModal({ open, onOpenChange, onSuccess }: AddUserModalProp
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background z-50">
                 {roles.map((role) => (
                   <SelectItem key={role} value={role}>
                     {role}

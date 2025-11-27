@@ -24,10 +24,9 @@ interface EditUserModalProps {
   user: User | null;
 }
 
-const roles = ["System Admin", "Admin", "Manager", "User"];
-
 export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserModalProps) {
   const [loading, setLoading] = useState(false);
+  const [roles, setRoles] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -36,6 +35,21 @@ export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserM
     phone: "",
     department: "",
   });
+
+  useEffect(() => {
+    fetchRoles();
+  }, []);
+
+  const fetchRoles = async () => {
+    try {
+      const data = await callEdgeFunction("get-roles");
+      setRoles(data.roles.map((r: any) => r.name));
+    } catch (error: any) {
+      console.error("Failed to fetch roles:", error);
+      // Fallback to default roles
+      setRoles(["System Admin", "Admin", "Manager", "User"]);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -125,7 +139,7 @@ export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserM
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background z-50">
                 {roles.map((role) => (
                   <SelectItem key={role} value={role}>
                     {role}
