@@ -42,16 +42,36 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Find user
-    const { data: user, error: fetchError } = await supabaseAdmin
+    // Find user (check exists first)
+    const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('email', email.toLowerCase())
-      .eq('status', 'active')
       .eq('is_deleted', false)
       .maybeSingle();
 
-    if (fetchError || !user) {
+    // Check if user is inactive
+    if (existingUser && existingUser.status !== 'active') {
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'USER_LOGIN_FAILED',
+        module: 'auth',
+        actor_id: existingUser.id,
+        actor_email: email,
+        actor_role: existingUser.role,
+        success: false,
+        details: { reason: 'account_inactive' },
+        ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+        user_agent: req.headers.get('user-agent') || 'unknown',
+      });
+
+      return new Response(
+        JSON.stringify({ error: 'Your account has been deactivated. Please contact an administrator.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // If user not found or not active
+    if (!existingUser) {
       await supabaseAdmin.from('audit_logs').insert({
         action: 'USER_LOGIN_FAILED',
         module: 'auth',
@@ -67,6 +87,8 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const user = existingUser;
 
     // Verify password using constant-time comparison
     const hashedInputPassword = await hashPassword(password);
