@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PermissionProtectedRoute } from "@/components/PermissionProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/auth/Auth";
 import VerifyOtp from "./pages/auth/VerifyOtp";
@@ -31,15 +32,25 @@ const App = () => (
           
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route element={<PermissionProtectedRoute module="Dashboard" />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+            </Route>
+            <Route element={<PermissionProtectedRoute module="Profile" />}>
+              <Route path="/profile" element={<Profile />} />
+            </Route>
           </Route>
 
-          {/* Admin Routes */}
-          <Route element={<ProtectedRoute requiredRoles={['Admin', 'System Admin']} />}>
-            <Route path="/admin/users" element={<Users />} />
-            <Route path="/admin/audit-logs" element={<AuditLogs />} />
-            <Route path="/admin/rbac" element={<RBAC />} />
+          {/* Admin Routes - Protected by permissions */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<PermissionProtectedRoute module="User Management" />}>
+              <Route path="/admin/users" element={<Users />} />
+            </Route>
+            <Route element={<PermissionProtectedRoute module="Audit Logs" />}>
+              <Route path="/admin/audit-logs" element={<AuditLogs />} />
+            </Route>
+            <Route element={<PermissionProtectedRoute module="RBAC" />}>
+              <Route path="/admin/rbac" element={<RBAC />} />
+            </Route>
           </Route>
 
           {/* Catch-all route */}

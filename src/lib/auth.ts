@@ -47,6 +47,8 @@ export const authHelpers = {
   logout: (): void => {
     authStorage.removeToken();
     authStorage.removeUser();
+    // Clear permissions cache
+    localStorage.removeItem('user_permissions_cache');
   },
 };
 

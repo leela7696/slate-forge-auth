@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Grid3x3 } from "lucide-react";
 import { authStorage } from "@/lib/auth";
 import { apps } from "@/lib/apps-config";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Popover,
   PopoverContent,
@@ -20,10 +21,11 @@ export function AppSwitcher() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const user = authStorage.getUser();
+  const { canViewModule } = usePermissions();
 
   const filteredApps = apps.filter((app) => {
-    if (!app.requiredRoles) return true;
-    return user?.role && app.requiredRoles.includes(user.role);
+    if (!app.requiredModule) return true;
+    return canViewModule(app.requiredModule);
   });
 
   const handleAppClick = (route: string) => {
