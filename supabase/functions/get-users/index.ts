@@ -97,14 +97,8 @@ serve(async (req) => {
       baseQuery = baseQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
     }
 
-    // Get total count
-    const { count: totalCount, error: countError } = await baseQuery
-      .select('*', { count: 'exact', head: true });
-
-    if (countError) throw countError;
-
-    // Fetch paginated data
-    const { data: users, error } = await baseQuery
+    // Fetch paginated data with count
+    const { data: users, count: totalCount, error } = await baseQuery
       .order('created_at', { ascending: false })
       .range(from, to);
 
