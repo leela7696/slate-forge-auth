@@ -19,6 +19,42 @@ async function verifyToken(token: string) {
   return await verify(token, key);
 }
 
+async function checkPermission(supabase: any, userId: string, module: string, action: string) {
+  const { data: user } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single();
+
+  if (!user) return false;
+
+  const { data: role } = await supabase
+    .from('roles')
+    .select('id')
+    .eq('name', user.role)
+    .single();
+
+  if (!role) return false;
+
+  const { data: permission } = await supabase
+    .from('permissions')
+    .select('*')
+    .eq('role_id', role.id)
+    .eq('module', module)
+    .single();
+
+  if (!permission) return false;
+
+  const actionMap: Record<string, string> = {
+    view: 'can_view',
+    create: 'can_create',
+    edit: 'can_edit',
+    delete: 'can_delete',
+  };
+
+  return permission[actionMap[action]] === true;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -41,7 +77,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // All authenticated users can view permissions (needed for their own access control)
+    // Check if user has permission to view RBAC
+    const hasViewPermission = await checkPermission(supabaseAdmin, payload.userId, 'RBAC', 'view');
+    if (!hasViewPermission) {
+      return new Response(
+        JSON.stringify({ error: 'You do not have permission to view permissions' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { roleId } = await req.json();
 
     if (!roleId) {
