@@ -19,6 +19,20 @@ async function verifyToken(token: string) {
   return await verify(token, key);
 }
 
+async function checkPermission(supabase: any, userId: string, module: string, action: string) {
+  const { data: user } = await supabase.from('users').select('role').eq('id', userId).single();
+  if (!user) return false;
+  
+  const { data: roleData } = await supabase.from('roles').select('id').eq('name', user.role).single();
+  if (!roleData) return false;
+  
+  const { data: permission } = await supabase.from('permissions').select('*').eq('role_id', roleData.id).eq('module', module).single();
+  if (!permission) return false;
+  
+  const fieldMap: Record<string, string> = { 'view': 'can_view', 'create': 'can_create', 'edit': 'can_edit', 'delete': 'can_delete' };
+  return permission[fieldMap[action]] === true;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -41,19 +55,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Verify user has admin access
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('id', payload.userId)
-      .single();
-
-    if (!user || !['Admin', 'System Admin'].includes(user.role)) {
+    // Check if user has permission to delete users
+    const hasPermission = await checkPermission(supabaseAdmin, payload.userId, 'User Management', 'delete');
+    
+    if (!hasPermission) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized - You do not have permission to delete users' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    // Get user role for audit logging
+    const { data: user } = await supabaseAdmin.from('users').select('role').eq('id', payload.userId).single();
 
     const { userId } = await req.json();
 
@@ -95,7 +108,7 @@ serve(async (req) => {
       module: 'user_management',
       actor_id: payload.userId,
       actor_email: payload.email,
-      actor_role: user.role,
+      actor_role: user?.role || 'unknown',
       target_id: userId,
       success: true,
       details: { 
