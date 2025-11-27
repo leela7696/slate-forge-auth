@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.toggle-user-status]
 verify_jwt = false
+
+[functions.get-roles]
+verify_jwt = false

@@ -54,6 +54,7 @@ interface User {
 export default function Users() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [roles, setRoles] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -68,8 +69,20 @@ export default function Users() {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   useEffect(() => {
+    fetchRoles();
     fetchUsers();
   }, [search, roleFilter, statusFilter, page, limit]);
+
+  const fetchRoles = async () => {
+    try {
+      const data = await callEdgeFunction("get-roles");
+      setRoles(data.roles.map((r: any) => r.name));
+    } catch (error: any) {
+      console.error("Failed to fetch roles:", error);
+      // Fallback to default roles
+      setRoles(["System Admin", "Admin", "Manager", "User"]);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -205,12 +218,13 @@ export default function Users() {
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Filter by role" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-background z-50">
                     <SelectItem value=" ">All Roles</SelectItem>
-                    <SelectItem value="System Admin">System Admin</SelectItem>
-                    <SelectItem value="Admin">Admin</SelectItem>
-                    <SelectItem value="Manager">Manager</SelectItem>
-                    <SelectItem value="User">User</SelectItem>
+                    {roles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Select
@@ -269,11 +283,12 @@ export default function Users() {
                             <SelectTrigger className="w-40">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="User">User</SelectItem>
-                              <SelectItem value="Manager">Manager</SelectItem>
-                              <SelectItem value="Admin">Admin</SelectItem>
-                              <SelectItem value="System Admin">System Admin</SelectItem>
+                            <SelectContent className="bg-background z-50">
+                              {roles.map((role) => (
+                                <SelectItem key={role} value={role}>
+                                  {role}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </TableCell>
