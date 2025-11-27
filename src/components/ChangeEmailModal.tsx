@@ -38,7 +38,11 @@ export const ChangeEmailModal = ({ open, onOpenChange, currentEmail, onSuccess }
       setCountdown(60);
       setStep(1);
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const rawMsg = error?.message || "Verification failed";
+      const isInvalidOtp = /invalid otp/i.test(rawMsg) || /INVALID_OTP/i.test(error?.error || "");
+      const isGenericNon2xx = /non-2xx/i.test(rawMsg) && (error?.context?.status === 400 || !error?.context?.status);
+      const friendly = (isInvalidOtp || isGenericNon2xx) ? "Orang-otap" : rawMsg;
+      toast({ title: "Error", description: friendly, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -56,7 +60,11 @@ export const ChangeEmailModal = ({ open, onOpenChange, currentEmail, onSuccess }
       toast({ title: "Success", description: "Current email verified" });
       setStep(2);
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const rawMsg = error?.message || "Failed to send OTP";
+      const isInvalidOtp = /invalid otp/i.test(rawMsg) || /INVALID_OTP/i.test(error?.error || "");
+      const isGenericNon2xx = /non-2xx/i.test(rawMsg) && (error?.context?.status === 400 || !error?.context?.status);
+      const friendly = (isInvalidOtp || isGenericNon2xx) ? "Orang-otap" : rawMsg;
+      toast({ title: "Error", description: friendly, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -75,7 +83,11 @@ export const ChangeEmailModal = ({ open, onOpenChange, currentEmail, onSuccess }
       setCountdown(60);
       setStep(3);
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const rawMsg = error?.message || "Failed to confirm new email";
+      const isInvalidOtp = /invalid otp/i.test(rawMsg) || /INVALID_OTP/i.test(error?.error || "");
+      const isGenericNon2xx = /non-2xx/i.test(rawMsg) && (error?.context?.status === 400 || !error?.context?.status);
+      const friendly = (isInvalidOtp || isGenericNon2xx) ? "Orang-otap" : rawMsg;
+      toast({ title: "Error", description: friendly, variant: "destructive" });
     } finally {
       setLoading(false);
     }

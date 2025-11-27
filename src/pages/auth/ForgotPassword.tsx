@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { callEdgeFunction } from "@/lib/auth";
 import { Loader2, ArrowLeft } from "lucide-react";
 
 export default function ForgotPassword() {
@@ -27,12 +27,7 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('forgot-password', {
-        body: { action: 'send-otp', email },
-      });
-
-      if (error) throw error;
-
+      await callEdgeFunction('forgot-password', { action: 'send-otp', email });
       toast({ title: "Success", description: "OTP sent to your email" });
       setStep(2);
       setCountdown(60);
@@ -47,7 +42,11 @@ export default function ForgotPassword() {
         });
       }, 1000);
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const rawMsg = error?.message || "Failed to send OTP";
+      const message = /non-2xx/i.test(rawMsg) && (error?.context?.status === 400 || !error?.context?.status)
+        ? (error?.context?.body && (() => { try { const p = JSON.parse(error.context.body); return p?.error || p?.message; } catch { return undefined; } })()) || rawMsg
+        : rawMsg;
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -71,16 +70,18 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('forgot-password', {
-        body: { action: 'reset', email, otp, newPassword },
-      });
-
-      if (error) throw error;
-
+      await callEdgeFunction('forgot-password', { action: 'reset', email, otp, newPassword });
       toast({ title: "Success", description: "Password reset successfully" });
       navigate('/auth');
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const rawMsg = error?.message || "Failed to reset password";
+      const isInvalidOtp = /invalid otp/i.test(rawMsg) || /INVALID_OTP/i.test(error?.error || "");
+      const isGenericNon2xx = /non-2xx/i.test(rawMsg) && (error?.context?.status === 400 || !error?.context?.status);
+      let friendly = rawMsg;
+      if (isInvalidOtp || isGenericNon2xx) {
+        friendly = "Orang-otap";
+      }
+      toast({ title: "Error", description: friendly, variant: "destructive" });
     } finally {
       setLoading(false);
     }

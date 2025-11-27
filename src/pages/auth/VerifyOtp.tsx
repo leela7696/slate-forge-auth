@@ -71,7 +71,7 @@ export default function VerifyOtp() {
       }
     } catch (error: any) {
       if (error.error === "INVALID_OTP") {
-        toast.error(`Invalid code. ${error.attempts_left} attempts remaining.`);
+        toast.error("Orang-otap");
       } else if (error.error === "OTP_EXPIRED") {
         toast.error("Code expired. Please request a new one.");
       } else if (error.error === "OTP_LOCKED") {

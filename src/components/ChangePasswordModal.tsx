@@ -71,7 +71,11 @@ export const ChangePasswordModal = ({ open, onOpenChange, onSuccess }: ChangePas
       onOpenChange(false);
       resetModal();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const rawMsg = error?.message || "Failed to update password";
+      const isInvalidOtp = /invalid otp/i.test(rawMsg) || /INVALID_OTP/i.test(error?.error || "");
+      const isGenericNon2xx = /non-2xx/i.test(rawMsg) && (error?.context?.status === 400 || !error?.context?.status);
+      const friendly = (isInvalidOtp || isGenericNon2xx) ? "Orang-otap" : rawMsg;
+      toast({ title: "Error", description: friendly, variant: "destructive" });
     } finally {
       setLoading(false);
     }
