@@ -294,7 +294,7 @@ export type Database = {
           password_hash: string | null
           phone: string | null
           profile_picture_url: string | null
-          role: Database["public"]["Enums"]["app_role"] | null
+          role: string | null
           status: string | null
           updated_at: string | null
         }
@@ -310,7 +310,7 @@ export type Database = {
           password_hash?: string | null
           phone?: string | null
           profile_picture_url?: string | null
-          role?: Database["public"]["Enums"]["app_role"] | null
+          role?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -326,7 +326,7 @@ export type Database = {
           password_hash?: string | null
           phone?: string | null
           profile_picture_url?: string | null
-          role?: Database["public"]["Enums"]["app_role"] | null
+          role?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -340,7 +340,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      app_role: "System Admin" | "Admin" | "Manager" | "User"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -467,8 +467,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["System Admin", "Admin", "Manager", "User"],
-    },
+    Enums: {},
   },
 } as const
