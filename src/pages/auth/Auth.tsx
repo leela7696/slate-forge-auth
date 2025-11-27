@@ -99,7 +99,30 @@ export default function Auth() {
         navigate(response.redirectTo || "/dashboard");
       }
     } catch (error: any) {
-      toast.error(error.message || "Invalid email or password");
+      // Prefer explicit backend-provided message for wrong password
+      let message = typeof error?.message === 'string' ? error.message : "Invalid email or password";
+      const rawBody = error?.context?.body;
+      const status = error?.status ?? error?.context?.status;
+      const isGenericNon2xx = typeof error?.message === 'string' && error.message.toLowerCase().includes('non-2xx');
+      if (typeof rawBody === 'string') {
+        try {
+          const parsed = JSON.parse(rawBody);
+          if (parsed && typeof parsed === 'object') {
+            if (typeof parsed.error === 'string') {
+              message = parsed.error;
+            } else if (typeof parsed.message === 'string') {
+              message = parsed.message;
+            }
+          }
+        } catch {
+          // ignore JSON parsing errors
+        }
+      }
+      // If Supabase throws a generic non-2xx error for 400, map to friendly message
+      if ((!rawBody || isGenericNon2xx) && (status === 400 || status === undefined)) {
+        message = 'wrong password. re-enter the password.';
+      }
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

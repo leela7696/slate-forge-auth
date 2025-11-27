@@ -1,5 +1,13 @@
+// Type shims for local TypeScript tooling; Deno provides these at runtime.
+declare const Deno: {
+  env: { get(name: string): string | undefined };
+};
+
+/* @ts-expect-error Remote Deno import */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+/* @ts-expect-error Remote Deno import */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+/* @ts-expect-error Remote Deno import */
 import { create } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
 
 const corsHeaders = {
@@ -22,7 +30,7 @@ async function hashPassword(password: string): Promise<string> {
     .join('');
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -83,7 +91,7 @@ serve(async (req) => {
       });
 
       return new Response(
-        JSON.stringify({ error: 'Invalid email or password' }),
+        JSON.stringify({ error: 'wrong password. re-enter the password.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -108,7 +116,7 @@ serve(async (req) => {
       });
 
       return new Response(
-        JSON.stringify({ error: 'Invalid email or password' }),
+        JSON.stringify({ error: 'wrong password. re-enter the password.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

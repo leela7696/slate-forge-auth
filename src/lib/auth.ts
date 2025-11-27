@@ -75,6 +75,31 @@ export const callEdgeFunction = async (
     ...(Object.keys(headers).length > 0 && { headers }),
   });
 
-  if (error) throw error;
+  if (error) {
+    // Try to surface more specific messages from the edge function response
+    const enriched: any = error;
+    const context: any = (error as any).context;
+    // Supabase functions error often includes raw response body in context.body
+    if (context) {
+      const rawBody = typeof context.body === 'string' ? context.body : undefined;
+      if (rawBody) {
+        try {
+          const parsed = JSON.parse(rawBody);
+          // If backend provided explicit error fields, hoist them
+          if (parsed && typeof parsed === 'object') {
+            if (parsed.error && typeof parsed.error === 'string') {
+              enriched.error = parsed.error;
+              enriched.message = parsed.error;
+            } else if (parsed.message && typeof parsed.message === 'string') {
+              enriched.message = parsed.message;
+            }
+          }
+        } catch {
+          // ignore JSON parse errors, fall back to default message
+        }
+      }
+    }
+    throw enriched;
+  }
   return data;
 };
