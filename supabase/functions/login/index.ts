@@ -3,11 +3,8 @@ declare const Deno: {
   env: { get(name: string): string | undefined };
 };
 
-/* @ts-expect-error Remote Deno import */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-/* @ts-expect-error Remote Deno import */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-/* @ts-expect-error Remote Deno import */
 import { create } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
 
 const corsHeaders = {
