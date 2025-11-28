@@ -38,41 +38,33 @@ async function checkPermission(
   // System Admin has full access
   if (user.role === 'System Admin') return true;
 
-  const { data: permissions } = await supabase
-    .from('users')
-    .select(`
-      role,
-      roles!inner(
-        id,
-        permissions!inner(
-          module,
-          can_view,
-          can_create,
-          can_edit,
-          can_delete
-        )
-      )
-    `)
-    .eq('id', userId)
-    .eq('roles.name', user.role)
-    .eq('roles.permissions.module', module)
+  // Get role ID from role name
+  const { data: role } = await supabase
+    .from('roles')
+    .select('id')
+    .eq('name', user.role)
     .single();
 
-  if (!permissions?.roles?.permissions) return false;
+  if (!role) return false;
 
-  const perm = permissions.roles.permissions;
-  switch (action) {
-    case 'view':
-      return perm.can_view || false;
-    case 'create':
-      return perm.can_create || false;
-    case 'edit':
-      return perm.can_edit || false;
-    case 'delete':
-      return perm.can_delete || false;
-    default:
-      return false;
-  }
+  // Get permission for this role and module
+  const { data: permission } = await supabase
+    .from('permissions')
+    .select('*')
+    .eq('role_id', role.id)
+    .eq('module', module)
+    .maybeSingle();
+
+  if (!permission) return false;
+
+  const fieldMap: Record<string, string> = {
+    'view': 'can_view',
+    'create': 'can_create',
+    'edit': 'can_edit',
+    'delete': 'can_delete'
+  };
+
+  return permission[fieldMap[action]] === true;
 }
 
 Deno.serve(async (req) => {

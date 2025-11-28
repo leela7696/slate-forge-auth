@@ -67,9 +67,9 @@ export default function AuditLogs() {
   const [loading, setLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [search, setSearch] = useState("");
-  const [actionFilter, setActionFilter] = useState("");
-  const [moduleFilter, setModuleFilter] = useState("");
-  const [successFilter, setSuccessFilter] = useState("");
+  const [actionFilter, setActionFilter] = useState("all");
+  const [moduleFilter, setModuleFilter] = useState("all");
+  const [successFilter, setSuccessFilter] = useState("all");
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [page, setPage] = useState(1);
@@ -87,9 +87,9 @@ export default function AuditLogs() {
       });
 
       if (search) params.append('search', search);
-      if (actionFilter) params.append('action', actionFilter);
-      if (moduleFilter) params.append('module', moduleFilter);
-      if (successFilter) params.append('success', successFilter);
+      if (actionFilter && actionFilter !== 'all') params.append('action', actionFilter);
+      if (moduleFilter && moduleFilter !== 'all') params.append('module', moduleFilter);
+      if (successFilter && successFilter !== 'all') params.append('success', successFilter);
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
 
@@ -188,7 +188,7 @@ export default function AuditLogs() {
                         <SelectValue placeholder="All actions" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All actions</SelectItem>
+                        <SelectItem value="all">All actions</SelectItem>
                         <SelectItem value="USER_LOGIN">Login</SelectItem>
                         <SelectItem value="USER_CREATED">User Created</SelectItem>
                         <SelectItem value="USER_UPDATED">User Updated</SelectItem>
@@ -206,7 +206,7 @@ export default function AuditLogs() {
                         <SelectValue placeholder="All modules" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All modules</SelectItem>
+                        <SelectItem value="all">All modules</SelectItem>
                         <SelectItem value="auth">Authentication</SelectItem>
                         <SelectItem value="users">User Management</SelectItem>
                         <SelectItem value="Profile">Profile</SelectItem>
@@ -219,7 +219,7 @@ export default function AuditLogs() {
                         <SelectValue placeholder="All status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All status</SelectItem>
+                        <SelectItem value="all">All status</SelectItem>
                         <SelectItem value="true">Success</SelectItem>
                         <SelectItem value="false">Failed</SelectItem>
                       </SelectContent>
