@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verify } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
+import { auditLogger } from "../_shared/auditLogger.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -111,22 +112,21 @@ serve(async (req) => {
 
     if (error) throw error;
 
-    // Log audit
-    await supabaseAdmin.from('audit_logs').insert({
+    // Log audit with before/after
+    await auditLogger(supabaseAdmin, {
       action: 'USER_STATUS_CHANGED',
-      module: 'user_management',
-      actor_id: payload.userId,
-      actor_email: payload.email,
-      actor_role: user?.role || 'unknown',
-      target_id: userId,
+      module: 'User Management',
+      actorId: payload.userId,
+      actorEmail: payload.email,
+      actorRole: user?.role || 'unknown',
+      targetId: userId,
+      targetEmail: targetUser.email,
+      targetSummary: `Status changed for ${targetUser.name}`,
+      beforeValues: { status: targetUser.status },
+      afterValues: { status },
       success: true,
-      details: { 
-        target_email: targetUser.email,
-        old_status: targetUser.status,
-        new_status: status
-      },
-      ip_address: req.headers.get('x-forwarded-for') || 'unknown',
-      user_agent: req.headers.get('user-agent') || 'unknown',
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+      userAgent: req.headers.get('user-agent') || 'unknown',
     });
 
     return new Response(

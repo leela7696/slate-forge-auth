@@ -29,6 +29,7 @@ export type Database = {
           module: string
           prev_hash: string | null
           success: boolean | null
+          target_email: string | null
           target_id: string | null
           target_summary: string | null
           target_type: string | null
@@ -48,6 +49,7 @@ export type Database = {
           module: string
           prev_hash?: string | null
           success?: boolean | null
+          target_email?: string | null
           target_id?: string | null
           target_summary?: string | null
           target_type?: string | null
@@ -67,6 +69,7 @@ export type Database = {
           module?: string
           prev_hash?: string | null
           success?: boolean | null
+          target_email?: string | null
           target_id?: string | null
           target_summary?: string | null
           target_type?: string | null
