@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
 import { verify } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
+import { auditLogger } from "../_shared/auditLogger.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -66,6 +67,13 @@ serve(async (req) => {
       );
     }
 
+    // Fetch current values for before/after logging
+    const { data: currentUser } = await supabase
+      .from('users')
+      .select('name, phone, department, profile_picture_url, email, role')
+      .eq('id', userId)
+      .single();
+
     // Build update object with only provided fields
     const updateData: any = {
       updated_at: new Date().toISOString(),
@@ -89,15 +97,41 @@ serve(async (req) => {
       throw error;
     }
 
-    // Create audit log
-    await supabase.from('audit_logs').insert({
+    // Build before/after values for changed fields only
+    const beforeValues: Record<string, any> = {};
+    const afterValues: Record<string, any> = {};
+    
+    if (name !== undefined && currentUser?.name !== name) {
+      beforeValues.name = currentUser?.name;
+      afterValues.name = name;
+    }
+    if (phone !== undefined && currentUser?.phone !== phone) {
+      beforeValues.phone = currentUser?.phone;
+      afterValues.phone = phone;
+    }
+    if (department !== undefined && currentUser?.department !== department) {
+      beforeValues.department = currentUser?.department;
+      afterValues.department = department;
+    }
+    if (profile_picture_url !== undefined && currentUser?.profile_picture_url !== profile_picture_url) {
+      beforeValues.profile_picture_url = currentUser?.profile_picture_url;
+      afterValues.profile_picture_url = profile_picture_url;
+    }
+
+    // Create audit log with before/after values
+    await auditLogger(supabase, {
       action: 'PROFILE_UPDATED',
-      module: 'profile',
-      actor_id: userId,
-      actor_email: data.email,
-      actor_role: data.role,
+      module: 'Profile',
+      actorId: userId,
+      actorEmail: data.email,
+      actorRole: data.role,
+      targetId: userId,
+      targetEmail: data.email,
+      beforeValues,
+      afterValues,
       success: true,
-      details: { updated_fields: updateData },
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+      userAgent: req.headers.get('user-agent') || 'unknown',
     });
 
     console.log(`Profile updated successfully for user ${userId}`);

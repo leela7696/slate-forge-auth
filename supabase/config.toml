@@ -63,5 +63,5 @@ verify_jwt = false
 [functions.toggle-user-status]
 verify_jwt = false
 
-[functions.get-roles]
+[functions.get-audit-logs]
 verify_jwt = false

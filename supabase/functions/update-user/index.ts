@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verify } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
+import { auditLogger } from "../_shared/auditLogger.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -80,7 +81,7 @@ serve(async (req) => {
     // Get target user info for audit
     const { data: targetUser } = await supabaseAdmin
       .from('users')
-      .select('email, role, name, status')
+      .select('email, role, name, status, phone, department')
       .eq('id', userId)
       .single();
 
@@ -110,22 +111,50 @@ serve(async (req) => {
 
     if (error) throw error;
 
-    // Log audit
-    await supabaseAdmin.from('audit_logs').insert({
+    // Build before/after values for changed fields only
+    const beforeValues: Record<string, any> = {};
+    const afterValues: Record<string, any> = {};
+    
+    if (name !== undefined && targetUser.name !== name) {
+      beforeValues.name = targetUser.name;
+      afterValues.name = name;
+    }
+    if (email !== undefined && targetUser.email !== email) {
+      beforeValues.email = targetUser.email;
+      afterValues.email = email;
+    }
+    if (role !== undefined && targetUser.role !== role) {
+      beforeValues.role = targetUser.role;
+      afterValues.role = role;
+    }
+    if (status !== undefined && targetUser.status !== status) {
+      beforeValues.status = targetUser.status;
+      afterValues.status = status;
+    }
+    if (phone !== undefined && targetUser.phone !== phone) {
+      beforeValues.phone = targetUser.phone;
+      afterValues.phone = phone;
+    }
+    if (department !== undefined && targetUser.department !== department) {
+      beforeValues.department = targetUser.department;
+      afterValues.department = department;
+    }
+
+    // Log audit with before/after
+    await auditLogger(supabaseAdmin, {
       action: 'USER_UPDATED',
-      module: 'user_management',
-      actor_id: payload.userId,
-      actor_email: payload.email,
-      actor_role: user?.role || 'unknown',
-      target_id: userId,
+      module: 'User Management',
+      actorId: payload.userId,
+      actorEmail: payload.email,
+      actorRole: user?.role || 'unknown',
+      targetId: userId,
+      targetEmail: updatedUser.email,
+      targetSummary: `Updated user: ${updatedUser.name}`,
+      beforeValues,
+      afterValues,
       success: true,
-      details: { 
-        target_email: updatedUser.email,
-        changes: updateData,
-        old_values: targetUser
-      },
-      ip_address: req.headers.get('x-forwarded-for') || 'unknown',
-      user_agent: req.headers.get('user-agent') || 'unknown',
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+      userAgent: req.headers.get('user-agent') || 'unknown',
     });
 
     return new Response(

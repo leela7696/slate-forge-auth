@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verify } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
+import { auditLogger } from "../_shared/auditLogger.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -134,22 +135,30 @@ serve(async (req) => {
     }
 
     // Get user role for audit log
+    // Get role name for audit
+    const { data: roleData } = await supabaseAdmin
+      .from('roles')
+      .select('name')
+      .eq('id', roleId)
+      .single();
+
     const { data: auditUser } = await supabaseAdmin
       .from('users')
       .select('role')
       .eq('id', payload.userId)
       .single();
 
-    await supabaseAdmin.from('audit_logs').insert({
+    await auditLogger(supabaseAdmin, {
       action: 'PERMISSIONS_UPDATED',
-      module: 'rbac',
-      actor_id: payload.userId,
-      actor_email: payload.email,
-      actor_role: auditUser?.role || 'unknown',
+      module: 'RBAC',
+      actorId: payload.userId,
+      actorEmail: payload.email,
+      actorRole: auditUser?.role || 'unknown',
+      targetSummary: `Updated ${permissions.length} permissions for role: ${roleData?.name || roleId}`,
+      metadata: { role_id: roleId, permissions_count: permissions.length },
       success: true,
-      details: { role_id: roleId, permissions_count: permissions.length },
-      ip_address: req.headers.get('x-forwarded-for') || 'unknown',
-      user_agent: req.headers.get('user-agent') || 'unknown',
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+      userAgent: req.headers.get('user-agent') || 'unknown',
     });
 
     return new Response(

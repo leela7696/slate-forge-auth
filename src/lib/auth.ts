@@ -67,11 +67,15 @@ export const callEdgeFunction = async (
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Check if body is FormData
-  const isFormData = body instanceof FormData;
+  // Check if body is URLSearchParams (for GET requests with query params)
+  const isUrlParams = body instanceof URLSearchParams;
+  
+  // For GET requests with query params, append them to the function name
+  const functionPath = isUrlParams ? `${functionName}?${body.toString()}` : functionName;
+  const requestBody = isUrlParams ? undefined : body;
 
-  const { data, error } = await supabase.functions.invoke(functionName, {
-    body,
+  const { data, error } = await supabase.functions.invoke(functionPath, {
+    body: requestBody,
     ...(Object.keys(headers).length > 0 && { headers }),
   });
 
