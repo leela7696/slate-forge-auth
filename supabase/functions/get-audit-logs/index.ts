@@ -38,6 +38,11 @@ async function checkPermission(
   // System Admin has full access
   if (user.role === 'System Admin') return true;
 
+  // Admins can always view audit logs
+  if (module === 'Audit Logs' && action === 'view' && user.role === 'Admin') {
+    return true;
+  }
+
   // Get role ID from role name
   const { data: role } = await supabase
     .from('roles')
