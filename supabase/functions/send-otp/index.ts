@@ -130,14 +130,9 @@ serve(async (req) => {
       throw insertError;
     }
 
-    // Send OTP via email
-    const emailResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-      },
-      body: JSON.stringify({
+    // Send OTP via email using Supabase client
+    const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
+      body: {
         to: email,
         subject: 'Your Slate AI verification code',
         html: `
@@ -151,11 +146,10 @@ serve(async (req) => {
             <p style="color: #64748b; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
           </div>
         `,
-      }),
+      },
     });
 
-    if (!emailResponse.ok) {
-      const emailError = await emailResponse.text();
+    if (emailError) {
       console.error('Email send failed:', emailError);
       
       // Log failure in audit log
@@ -164,12 +158,12 @@ serve(async (req) => {
         module: 'auth',
         actor_email: email,
         success: false,
-        details: { error: emailError },
+        details: { error: emailError.message },
         ip_address: req.headers.get('x-forwarded-for') || 'unknown',
         user_agent: req.headers.get('user-agent') || 'unknown',
       });
       
-      throw new Error('Failed to send OTP email');
+      throw new Error('Failed to send OTP email. Please check your SMTP configuration.');
     }
 
     // Log OTP sent
