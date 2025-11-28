@@ -87,16 +87,40 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const payload = await verifyToken(token);
-    const userId = payload.sub as string;
+    const payload = await verifyToken(token) as any;
+    const userId = payload.userId || payload.sub as string;
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    console.log('User ID:', userId);
+
+    // Get user role for permission check
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    console.log('User data:', userData);
+
+    if (userError || !userData) {
+      console.error('Error fetching user:', userError);
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Check if user has permission to view audit logs
-    const hasPermission = await checkPermission(supabase, userId, 'Audit Logs', 'view');
+    // System Admin and Admin roles always have access
+    const hasPermission = userData.role === 'System Admin' || 
+                          userData.role === 'Admin' || 
+                          await checkPermission(supabase, userId, 'Audit Logs', 'view');
+    
+    console.log('Has permission:', hasPermission, 'Role:', userData.role);
     
     if (!hasPermission) {
       return new Response(
