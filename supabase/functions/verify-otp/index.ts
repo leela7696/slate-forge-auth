@@ -124,23 +124,54 @@ serve(async (req) => {
       );
     }
 
-    // OTP is valid - create user
-    const { data: newUser, error: createError } = await supabaseAdmin
+    // OTP is valid - check if user exists first
+    const { data: existingUser } = await supabaseAdmin
       .from('users')
-      .insert({
-        name: otpRequest.name,
-        email: email.toLowerCase(),
-        password_hash: otpRequest.password_hash,
-        role: 'User',
-        status: 'active',
-        last_login_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .eq('is_deleted', false)
+      .maybeSingle();
 
-    if (createError) {
-      console.error('User creation error:', createError);
-      throw createError;
+    let newUser;
+    
+    if (existingUser) {
+      // User exists - update their password and reactivate if needed
+      const { data: updatedUser, error: updateError } = await supabaseAdmin
+        .from('users')
+        .update({
+          password_hash: otpRequest.password_hash,
+          status: 'active',
+          last_login_at: new Date().toISOString(),
+        })
+        .eq('id', existingUser.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('User update error:', updateError);
+        throw updateError;
+      }
+      newUser = updatedUser;
+    } else {
+      // User doesn't exist - create new user
+      const { data: createdUser, error: createError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          name: otpRequest.name,
+          email: email.toLowerCase(),
+          password_hash: otpRequest.password_hash,
+          role: 'User',
+          status: 'active',
+          last_login_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('User creation error:', createError);
+        throw createError;
+      }
+      newUser = createdUser;
     }
 
     // Delete OTP request
@@ -171,25 +202,13 @@ serve(async (req) => {
     );
 
     // Log events
-    await supabaseAdmin.from('audit_logs').insert([
+    const auditLogs: any[] = [
       {
         action: 'OTP_VERIFIED',
         module: 'auth',
         actor_id: newUser.id,
         actor_email: email,
         actor_role: newUser.role,
-        success: true,
-        ip_address: req.headers.get('x-forwarded-for') || 'unknown',
-        user_agent: req.headers.get('user-agent') || 'unknown',
-      },
-      {
-        action: 'USER_CREATED',
-        module: 'users',
-        actor_id: newUser.id,
-        actor_email: email,
-        actor_role: newUser.role,
-        target_id: newUser.id,
-        target_type: 'user',
         success: true,
         ip_address: req.headers.get('x-forwarded-for') || 'unknown',
         user_agent: req.headers.get('user-agent') || 'unknown',
@@ -204,7 +223,25 @@ serve(async (req) => {
         ip_address: req.headers.get('x-forwarded-for') || 'unknown',
         user_agent: req.headers.get('user-agent') || 'unknown',
       },
-    ]);
+    ];
+
+    // Only log USER_CREATED if this was a new user
+    if (!existingUser) {
+      auditLogs.push({
+        action: 'USER_CREATED',
+        module: 'users',
+        actor_id: newUser.id,
+        actor_email: email,
+        actor_role: newUser.role,
+        target_id: newUser.id,
+        target_type: 'user',
+        success: true,
+        ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+        user_agent: req.headers.get('user-agent') || 'unknown',
+      });
+    }
+
+    await supabaseAdmin.from('audit_logs').insert(auditLogs);
 
     return new Response(
       JSON.stringify({
