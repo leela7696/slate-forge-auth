@@ -44,68 +44,109 @@ export function ProfileMenu() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-primary/20 transition-all"
+          className="
+            relative h-10 w-10 rounded-full 
+            hover:bg-green-600/10 hover:ring-2 hover:ring-green-500/30
+            transition-all
+          "
         >
           <Avatar className="h-10 w-10">
             <AvatarImage src={user?.profile_picture_url || ""} alt={user?.name || "User"} />
-            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+            <AvatarFallback
+              className="
+                bg-green-500/20 text-green-300 font-semibold
+              "
+            >
               {getInitials()}
             </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        className="w-80 p-4 bg-card" 
+
+      <DropdownMenuContent
+        className="
+          w-80 p-4 rounded-2xl
+          bg-[#04160e]/85 backdrop-blur-xl
+          border border-green-500/20
+          shadow-lg shadow-green-500/20
+          text-white
+        "
         align="end"
         sideOffset={8}
       >
+        {/* Top Header Section */}
         <div className="flex flex-col items-center gap-4 py-4">
-          <Avatar className="h-20 w-20 border-2 border-primary/10">
+          <Avatar className="h-20 w-20 border-2 border-green-500/30 shadow-green-500/20 shadow-md">
             <AvatarImage src={user?.profile_picture_url || ""} alt={user?.name || "User"} />
-            <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
+            <AvatarFallback className="bg-green-500/20 text-green-300 text-2xl font-semibold">
               {getInitials()}
             </AvatarFallback>
           </Avatar>
+
           <div className="text-center space-y-1">
-            <p className={`font-semibold text-lg ${isNameMissing ? "text-muted-foreground italic" : "text-foreground"}`}>
+            <p
+              className={`
+                font-semibold text-lg 
+                ${isNameMissing ? "text-white/60 italic" : "text-white"}
+              `}
+            >
               {displayName}
             </p>
-            <p className="text-sm text-muted-foreground">{user?.email}</p>
+            <p className="text-sm text-white/60">{user?.email}</p>
+
             {user?.role && (
-              <p className="text-xs text-primary font-medium bg-primary/10 px-2 py-1 rounded-full inline-block">
+              <p className="text-xs font-medium bg-green-500/15 text-green-300 px-3 py-1 rounded-full inline-block border border-green-500/20">
                 {user.role}
               </p>
             )}
           </div>
         </div>
 
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-green-500/20" />
 
+        {/* Menu Buttons */}
         <DropdownMenuItem
           onClick={() => navigate("/profile")}
-          className="cursor-pointer py-3"
+          className="
+            cursor-pointer py-3 rounded-md
+            hover:bg-green-600/20 hover:text-green-300
+          "
         >
-          <User className="mr-3 h-4 w-4" />
+          <User className="mr-3 h-4 w-4 text-green-300" />
           <span>Manage Profile</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem className="cursor-pointer py-3">
-          <Settings className="mr-3 h-4 w-4" />
+        <DropdownMenuItem
+          className="
+            cursor-pointer py-3 rounded-md
+            hover:bg-green-600/20 hover:text-green-300
+          "
+        >
+          <Settings className="mr-3 h-4 w-4 text-green-300" />
           <span>Account Settings</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem className="cursor-pointer py-3">
-          <HelpCircle className="mr-3 h-4 w-4" />
+        <DropdownMenuItem
+          className="
+            cursor-pointer py-3 rounded-md
+            hover:bg-green-600/20 hover:text-green-300
+          "
+        >
+          <HelpCircle className="mr-3 h-4 w-4 text-green-300" />
           <span>Help & Support</span>
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-green-500/20 my-1" />
 
+        {/* Logout */}
         <DropdownMenuItem
           onClick={handleLogout}
-          className="cursor-pointer py-3 text-destructive focus:text-destructive focus:bg-destructive/10"
+          className="
+            cursor-pointer py-3 rounded-md
+            text-red-400 hover:text-red-500 hover:bg-red-500/10
+          "
         >
-          <LogOut className="mr-3 h-4 w-4" />
+          <LogOut className="mr-3 h-4 w-4 text-red-500" />
           <span>Logout</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

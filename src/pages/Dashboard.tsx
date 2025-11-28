@@ -37,178 +37,129 @@ function DashboardContent() {
     toast({
       title: `Welcome back, ${displayName}!`,
       duration: 4000,
-      className: "shadow-xl border border-primary/10 bg-background/95",
+      className: "shadow-xl border border-green-500/20 bg-black/40 text-white",
     });
 
     window.localStorage.removeItem("justLoggedIn");
     
-    // Show profile completion modal if needed
     if (!profileCompletion.isComplete && shouldShowProfileCompletionPopup()) {
       setTimeout(() => setShowProfileModal(true), 500);
     }
   }, [displayName]);
 
   return (
-    <div className="min-h-screen flex w-full">
+    <div className="min-h-screen flex w-full bg-[#071d12] relative overflow-hidden text-white">
+
+      {/* glowing background like auth */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute w-[1000px] h-[1000px] bg-green-500/20 rounded-full blur-[200px] animate-pulse -top-44 -left-40" />
+        <div className="absolute w-[850px] h-[850px] bg-green-700/20 rounded-full blur-[200px] animate-pulse-slow bottom-0 -right-32" />
+      </div>
+
       <AppSidebar />
       <div className="flex flex-col flex-1 w-full">
         <TopNav />
-        <main className="flex-1 p-8 bg-gradient-to-br from-background via-secondary/10 to-background">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 rounded-full border-primary/20 shadow-sm"
-                onClick={toggleSidebar}
-                aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
-              >
-                <ToggleIcon className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">
-                  Welcome back, {displayName}
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  Here's what's happening with your account today.
-                </p>
+
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto space-y-10">
+
+            {/* Header */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-full border border-white/30 text-white hover:bg-white/10 backdrop-blur-sm"
+                  onClick={toggleSidebar}
+                >
+                  <ToggleIcon className="h-5 w-5" />
+                </Button>
+                <div>
+                  <h1 className="text-3xl font-bold text-white">Welcome back, {displayName}</h1>
+                  <p className="text-white/70 mt-1">Here’s what’s happening with your account today</p>
+                </div>
               </div>
             </div>
+
+            {!profileCompletion.isComplete && shouldShowProfileCompletionPopup() === false && (
+              <ProfileCompletionReminder completion={profileCompletion} />
+            )}
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { title: "Total Users", value: "1,234", change: "+12% from last month", icon: Users },
+                { title: "Active Sessions", value: "89", change: "Currently online", icon: Activity },
+                { title: "Audit Events", value: "3,456", change: "Last 30 days", icon: FileText },
+                { title: "Growth", value: "+24.5%", change: "vs last quarter", icon: TrendingUp },
+              ].map((stat, i) => (
+                <Card key={i} className="bg-white/10 border border-white/20 backdrop-blur-xl shadow-xl hover:shadow-green-500/20 transition">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-white/80">
+                      {stat.title}
+                    </CardTitle>
+                    <stat.icon className="h-5 w-5 text-green-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-white">{stat.value}</div>
+                    <p className="text-sm text-white/70 mt-1">{stat.change}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Dual Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+              <Card className="bg-white/10 border border-white/20 backdrop-blur-xl shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-white">Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { label: "New user registered", time: "2 minutes ago" },
+                      { label: "Profile updated", time: "15 minutes ago" },
+                      { label: "Security settings changed", time: "1 hour ago" },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-start gap-4 p-3 rounded-lg hover:bg-white/10 transition">
+                        <div className="w-2 h-2 rounded-full bg-green-400 mt-2" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-white">{item.label}</p>
+                          <p className="text-xs text-white/70">{item.time}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/10 border border-white/20 backdrop-blur-xl shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-white">Quick Stats</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      ["Admin Users", "12"],
+                      ["Standard Users", "1,222"],
+                      ["Active Today", "342"],
+                      ["Failed Logins", "7"],
+                    ].map(([k, v], idx) => (
+                      <div key={idx} className="flex justify-between items-center">
+                        <span className="text-sm text-white/70">{k}</span>
+                        <span className="text-sm font-medium text-white">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-
-          {!profileCompletion.isComplete && shouldShowProfileCompletionPopup() === false && (
-            <ProfileCompletionReminder completion={profileCompletion} />
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Total Users
-                  </CardTitle>
-                  <Users className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">1,234</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    +12% from last month
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Active Sessions
-                  </CardTitle>
-                  <Activity className="h-4 w-4 text-accent" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">89</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Currently online
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Audit Events
-                  </CardTitle>
-                  <FileText className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">3,456</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Last 30 days
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Growth
-                  </CardTitle>
-                  <TrendingUp className="h-4 w-4 text-accent" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">+24.5%</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    vs last quarter
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">New user registered</p>
-                        <p className="text-xs text-muted-foreground">2 minutes ago</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="w-2 h-2 rounded-full bg-accent mt-2" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Profile updated</p>
-                        <p className="text-xs text-muted-foreground">15 minutes ago</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Security settings changed</p>
-                        <p className="text-xs text-muted-foreground">1 hour ago</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Stats</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Admin Users</span>
-                      <span className="text-sm font-medium">12</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Standard Users</span>
-                      <span className="text-sm font-medium">1,222</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Active Today</span>
-                      <span className="text-sm font-medium">342</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Failed Logins</span>
-                      <span className="text-sm font-medium">7</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-        </div>
         </main>
       </div>
-      
-      <ProfileCompletionModal 
-        open={showProfileModal} 
-        onOpenChange={setShowProfileModal} 
-      />
+
+      <ProfileCompletionModal open={showProfileModal} onOpenChange={setShowProfileModal} />
     </div>
   );
 }

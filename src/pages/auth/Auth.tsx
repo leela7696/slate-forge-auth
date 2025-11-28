@@ -20,25 +20,24 @@ import { callEdgeFunction, authStorage } from "@/lib/auth";
 const emailSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
-
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
 });
-
-const signupSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const signupSchema = z
+  .object({
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 type EmailForm = z.infer<typeof emailSchema>;
 type LoginForm = z.infer<typeof loginSchema>;
 type SignupForm = z.infer<typeof signupSchema>;
-
 type AuthMode = "email" | "login" | "signup";
 
 export default function Auth() {
@@ -66,9 +65,7 @@ export default function Auth() {
     setIsLoading(true);
     try {
       const response = await callEdgeFunction("check-email", { email: values.email });
-
       setUserEmail(values.email);
-      
       if (response.exists) {
         loginForm.setValue("email", values.email);
         setMode("login");
@@ -87,41 +84,15 @@ export default function Auth() {
     setIsLoading(true);
     try {
       const response = await callEdgeFunction("login", values);
-
       if (response.success) {
         authStorage.setToken(response.token);
         authStorage.setUser(response.user);
-        // Clear permissions cache to fetch fresh permissions on login
-        localStorage.removeItem('user_permissions_cache');
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem("justLoggedIn", "true");
-        }
+        localStorage.removeItem("user_permissions_cache");
+        window.localStorage.setItem("justLoggedIn", "true");
         navigate(response.redirectTo || "/dashboard");
       }
     } catch (error: any) {
-      // Prefer explicit backend-provided message for wrong password
-      let message = typeof error?.message === 'string' ? error.message : "Invalid email or password";
-      const rawBody = error?.context?.body;
-      const status = error?.status ?? error?.context?.status;
-      const isGenericNon2xx = typeof error?.message === 'string' && error.message.toLowerCase().includes('non-2xx');
-      if (typeof rawBody === 'string') {
-        try {
-          const parsed = JSON.parse(rawBody);
-          if (parsed && typeof parsed === 'object') {
-            if (typeof parsed.error === 'string') {
-              message = parsed.error;
-            } else if (typeof parsed.message === 'string') {
-              message = parsed.message;
-            }
-          }
-        } catch {
-          // ignore JSON parsing errors
-        }
-      }
-      // If Supabase throws a generic non-2xx error for 400, map to friendly message
-      if ((!rawBody || isGenericNon2xx) && (status === 400 || status === undefined)) {
-        message = 'wrong password. re-enter the password.';
-      }
+      let message = typeof error?.message === "string" ? error.message : "Invalid email or password";
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -132,11 +103,10 @@ export default function Auth() {
     setIsLoading(true);
     try {
       const response = await callEdgeFunction("send-otp", {
-        name: values.email.split('@')[0],
+        name: values.email.split("@")[0],
         email: values.email,
         password: values.password,
       });
-
       if (response.success) {
         toast.success("Verification code sent to your email!");
         navigate(`/auth/verify-otp?email=${encodeURIComponent(values.email)}`);
@@ -154,134 +124,132 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-[#071d12] relative overflow-hidden px-4">
+      {/* Matching Landing Glow Background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute w-[900px] h-[900px] bg-green-500/20 rounded-full blur-[200px] animate-pulse -top-40 -left-40"></div>
+        <div className="absolute w-[700px] h-[700px] bg-green-700/20 rounded-full blur-[200px] animate-pulse-slow bottom-0 -right-32"></div>
+      </div>
+
+      <Card className="w-full max-w-md bg-white/10 border border-white/20 backdrop-blur-xl shadow-2xl">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center"><div className="flex items-center justify-center"><img src="/favicon1.ico" alt="Slate AI Logo" className="w-23 h-16" /></div>
+          <CardTitle className="text-3xl font-bold text-center flex flex-col items-center gap-4 text-white">
+            <img
+              src="/slateai-logo.png"
+              alt="Slate AI Logo"
+              className="h-16 w-auto rounded-2xl shadow-green-500/20 shadow-lg hover:shadow-green-400/30 transition-all duration-300"
+            />
             {mode === "email" && "Welcome to Slate AI"}
-            {mode === "login" && "Welcome back"}
-            {mode === "signup" && "Create an account"}
+            {mode === "login" && "Welcome Back"}
+            {mode === "signup" && "Create Account"}
           </CardTitle>
-          <CardDescription className="text-center">
+          <CardDescription className="text-center text-white/80">
             {mode === "email" && "Enter your email to continue"}
             {mode === "login" && "Sign in to your account"}
             {mode === "signup" && "Get started with Slate AI"}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+
+        <CardContent className="space-y-4 text-white">
+
+          {/* EMAIL MODE */}
           {mode === "email" && (
             <Form {...emailForm}>
               <form onSubmit={emailForm.handleSubmit(handleEmailSubmit)} className="space-y-4">
-                <FormField
-                  control={emailForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="john@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <FormField control={emailForm.control} name="email" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="john@example.com" className="bg-black/20 border-white/40 text-white" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <Button className="w-full bg-green-600 hover:bg-green-500 text-white" disabled={isLoading}>
                   {isLoading ? "Checking..." : "Continue"}
                 </Button>
               </form>
             </Form>
           )}
 
+          {/* LOGIN MODE */}
           {mode === "login" && (
             <Form {...loginForm}>
               <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
-                <FormField
-                  control={loginForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" {...field} disabled />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={loginForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormField control={loginForm.control} name="email" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" disabled className="bg-black/20 border-white/40 text-white" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )} />
+
+                <FormField control={loginForm.control} name="password" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" className="bg-black/20 border-white/40 text-white" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
                 <div className="flex justify-end">
-                  <Link to="/auth/forgot-password" className="text-sm text-primary hover:underline">
+                  <Link to="/auth/forgot-password" className="text-sm text-white hover:underline">
                     Forgot password?
                   </Link>
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign in"}
+
+                <Button type="submit" className="w-full bg-transparent text-white border border-white/40 hover:border-white hover:bg-white/10 backdrop-blur" disabled={isLoading}>
+                  {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
-                <Button type="button" variant="ghost" className="w-full" onClick={handleBack}>
+
+                <Button type="button" variant="ghost" className="w-full text-white/70 hover:text-white" onClick={handleBack}>
                   Use different email
                 </Button>
               </form>
             </Form>
           )}
 
+          {/* SIGNUP MODE */}
           {mode === "signup" && (
             <Form {...signupForm}>
               <form onSubmit={signupForm.handleSubmit(handleSignupSubmit)} className="space-y-4">
-                <FormField
-                  control={signupForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" {...field} disabled />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={signupForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={signupForm.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Creating account..." : "Create Account"}
+                <FormField control={signupForm.control} name="email" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" disabled className="bg-black/20 border-white/40 text-white" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )} />
+
+                <FormField control={signupForm.control} name="password" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" className="bg-black/20 border-white/40 text-white" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={signupForm.control} name="confirmPassword" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Confirm Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" className="bg-black/20 border-white/40 text-white" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <Button className="w-full bg-transparent text-white border border-white/40 hover:border-white hover:bg-white/10 backdrop-blur" disabled={isLoading}>
+                  {isLoading ? "Creating..." : "Create Account"}
                 </Button>
-                <Button type="button" variant="ghost" className="w-full" onClick={handleBack}>
+
+                <Button type="button" variant="ghost" className="w-full text-white/70 hover:text-white" onClick={handleBack}>
                   Use different email
                 </Button>
               </form>
