@@ -13,14 +13,14 @@ export function TopNav() {
       "
     >
       <div className="flex h-full items-center justify-between w-full px-6">
-        
+
         {/* Logo */}
         <div className="flex items-center gap-3">
           <img
             src="/slateai-logo.png"
             alt="Slate AI"
             className="
-              h-10 w-auto select-none
+              h-10 w-auto select-none rounded-2xl
               transition-all duration-300
               hover:scale-110 hover:drop-shadow-[0_0_10px_rgba(0,255,150,0.5)]
               cursor-pointer
