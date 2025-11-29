@@ -9,62 +9,61 @@
 
 @layer base {
   :root {
-    /* Dark Modern Slate AI Theme */
-    /* Background: #04160e (approx hsl(153 69% 5%)) */
-    --background: 153 69% 5%;
-    --foreground: 0 0% 100%;
+    /* Core Branding */
+    --background: 0 0% 100%;              /* White UI */
+    --foreground: 0 0% 0%;                /* Black text */
 
-    /* Surfaces use glass at component level; keep dark tokens */
-    --card: 153 69% 6%;
-    --card-foreground: 0 0% 100%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
 
-    --popover: 153 69% 6%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
 
-    /* Primary highlight: #22c55e (Tailwind green-500) */
-    --primary: 142 71% 45%;
+    /* Primary – Slate AI Green (#86BC25) */
+    --primary: 81 66% 45%;
     --primary-foreground: 0 0% 100%;
 
-    /* Accent kept minimal */
-    --accent: 142 71% 45%;
+    /* Accent – Google One–inspired (use sparingly) */
+    --accent: 217 88% 61%;
     --accent-foreground: 0 0% 100%;
 
-    /* Secondary tokens are subtle dark neutrals */
-    --secondary: 153 20% 10%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary is not emphasized in the brand → subtle neutral */
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 0%;
 
-    /* Muted text */
-    --muted: 153 20% 12%;
-    --muted-foreground: 0 0% 60%;
+    /* Muted */
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    /* Borders / Inputs */
-    --border: 0 0% 20%; /* ~white/20 */
-    --input: 0 0% 20%;
-    --ring: 142 71% 45%; /* green highlight */
+    /* Border / Input */
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 81 66% 45%;
 
-    /* Sidebar tokens */
-    --sidebar-background: 153 69% 5%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 142 71% 45%;
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 81 66% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 16%; /* used for hover; replaced in classes where needed */
-    --sidebar-accent-foreground: 142 71% 85%;
-    --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 142 71% 45%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 88%;
+    --sidebar-ring: 81 66% 45%;
 
-    /* Gradients and Shadows */
-    --gradient-primary: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
-    --gradient-subtle: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    /* Gradients (used very lightly) */
+    --gradient-primary: linear-gradient(135deg, hsl(81 66% 45%), hsl(217 88% 61%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 98%));
 
-    --shadow-sm: 0 1px 2px 0 rgb(0 255 150 / 0.06);
-    --shadow-md: 0 4px 6px -1px rgb(0 255 150 / 0.10);
-    --shadow-lg: 0 10px 15px -3px rgb(0 255 150 / 0.16);
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.10);
 
     /* Transitions */
-    --transition-smooth: all 0.3s ease;
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
     /* Border Radius */
-    --radius: 0.75rem;
+    --radius: 0.75rem; /* matches Google One look */
   }
 
   /* Dark mode (Slate AI only supports light UI — dark kept for dev flexibility) */
@@ -105,12 +104,3 @@
     @apply bg-background text-foreground font-sans;
   }
 }
-
-@keyframes fade {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade { animation: fade 0.8s ease-in-out both; }
-.animate-fade-up { animation: fade 1s ease-in-out both; }
-.animate-pulse-slow { animation: pulse 6s ease-in-out infinite; }
-
