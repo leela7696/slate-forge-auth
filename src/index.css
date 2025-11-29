@@ -9,38 +9,90 @@
 
 @layer base {
   :root {
-    /* Dark Modern Slate AI – Global Theme */
+    /* Light – Soft Premium UI */
     /* Background and text */
-    --background: 153 69% 5%;             /* #04160e in HSL */
-    --foreground: 0 0% 100%;              /* White text */
+    --background: 210 30% 98%;            /* approx #f7f9fb */
+    --foreground: 165 6% 6%;              /* approx #0b0f0e */
 
-    /* Glass surfaces */
-    --card: 0 0% 100% / 0.06;              /* bg-white/6 */
-    --card-foreground: 0 0% 100%;
+    /* Surfaces */
+    --card: 0 0% 100%;                    /* white */
+    --card-foreground: 165 6% 6%;
 
-    --popover: 0 0% 100% / 0.06;           /* bg-white/6 */
-    --popover-foreground: 0 0% 100%;
+    --popover: 0 0% 100%;                 /* white */
+    --popover-foreground: 165 6% 6%;
 
-    /* Primary highlight – green glow (#22c55e) */
-    --primary: 142 70% 45%;
+    /* Primary – brand consistent across themes */
+    --primary: 142 70% 45%;               /* green */
     --primary-foreground: 0 0% 100%;
 
-    /* Accent hover surface */
-    --accent: 0 0% 100% / 0.10;            /* bg-white/10 */
-    --accent-foreground: 0 0% 100%;
+    /* Accent / Secondary */
+    --accent: 210 30% 96%;                /* subtle hover */
+    --accent-foreground: 165 6% 6%;
 
-    /* Secondary subtle surface */
-    --secondary: 0 0% 100% / 0.08;         /* bg-white/8 */
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 210 30% 97%;
+    --secondary-foreground: 165 6% 6%;
 
-    /* Muted text & surface */
-    --muted: 0 0% 100% / 0.06;             /* bg-white/6 */
-    --muted-foreground: 0 0% 100% / 0.60;  /* text-white/60 */
+    /* Muted */
+    --muted: 210 24% 95%;
+    --muted-foreground: 165 6% 40%;       /* approx #5b6361 */
 
     /* Borders / Inputs / Rings */
-    --border: 0 0% 100% / 0.20;            /* border-white/20 */
-    --input: 0 0% 100% / 0.20;             /* border-white/20 */
-    --ring: 142 70% 45%;                   /* green focus ring */
+    --border: 0 0% 0% / 0.08;             /* rgba(0,0,0,0.08) */
+    --input: 0 0% 0% / 0.08;
+    --ring: 142 70% 45%;                  /* green focus ring */
+
+    /* Sidebar tokens (light) */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 165 6% 6%;
+    --sidebar-primary: 142 70% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 30% 96%;
+    --sidebar-accent-foreground: 165 6% 6%;
+    --sidebar-border: 0 0% 0% / 0.08;
+    --sidebar-ring: 142 70% 45%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(0 0% 100%), hsl(210 30% 98%));
+    --gradient-subtle: linear-gradient(180deg, hsl(210 30% 99%), hsl(210 30% 97%));
+
+    /* Shadows (light) */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+    --shadow-md: 0 6px 20px -2px rgb(0 0 0 / 0.08);
+    --shadow-lg: 0 12px 40px -4px rgb(0 0 0 / 0.10);
+
+    /* Transitions */
+    --transition-smooth: all 0.3s ease;
+
+    /* Border Radius */
+    --radius: 0.75rem;
+  }
+
+  /* Dark mode – Existing Slate AI design */
+  .dark {
+    --background: 153 69% 5%;             /* #04160e */
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 100% / 0.06;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 100% / 0.06;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 142 70% 45%;               /* neon-green accents retained */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 100% / 0.08;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 100% / 0.06;
+    --muted-foreground: 0 0% 100% / 0.60;
+
+    --accent: 0 0% 100% / 0.10;
+    --accent-foreground: 0 0% 100%;
+
+    --border: 0 0% 100% / 0.20;
+    --input: 0 0% 100% / 0.20;
+    --ring: 142 70% 45%;
 
     /* Sidebar tokens */
     --sidebar-background: 153 69% 5%;
@@ -60,41 +112,6 @@
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);
     --shadow-md: 0 4px 10px -1px rgb(0 255 150 / 0.08);
     --shadow-lg: 0 0 30px rgb(34 197 94 / 0.20);
-
-    /* Transitions */
-    --transition-smooth: all 0.3s ease;
-
-    /* Border Radius */
-    --radius: 0.75rem;
-  }
-
-  /* Dark mode (Slate AI only supports light UI — dark kept for dev flexibility) */
-  .dark {
-    /* Mirror the dark slate theme for explicit dark class */
-    --background: 153 69% 5%;
-    --foreground: 0 0% 100%;
-
-    --card: 0 0% 100% / 0.06;
-    --card-foreground: 0 0% 100%;
-
-    --popover: 0 0% 100% / 0.06;
-    --popover-foreground: 0 0% 100%;
-
-    --primary: 142 70% 45%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 0 0% 100% / 0.08;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 0 0% 100% / 0.06;
-    --muted-foreground: 0 0% 100% / 0.60;
-
-    --accent: 0 0% 100% / 0.10;
-    --accent-foreground: 0 0% 100%;
-
-    --border: 0 0% 100% / 0.20;
-    --input: 0 0% 100% / 0.20;
-    --ring: 142 70% 45%;
   }
 }
 

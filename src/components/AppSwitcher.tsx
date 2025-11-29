@@ -39,20 +39,20 @@ export function AppSwitcher() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-10 rounded-full text-white hover:bg-white/10 hover:scale-105 transition"
+          className="h-10 w-10 rounded-full text-foreground hover:bg-accent hover:text-accent-foreground hover:scale-105 transition"
         >
-          <LayoutGrid className="h-5 w-5 text-white" />
+          <LayoutGrid className="h-5 w-5" />
           <span className="sr-only">App switcher</span>
         </Button>
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[340px] p-4 rounded-2xl border border-white/20 bg-[#04160e]/90 backdrop-blur-xl shadow-2xl text-white"
+        className="w-[340px] p-4 rounded-2xl border border-border bg-popover backdrop-blur-xl shadow-2xl text-popover-foreground"
         align="end"
         sideOffset={8}
       >
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold px-2 text-white/70">
+          <h3 className="text-sm font-semibold px-2 text-muted-foreground">
             Slate AI Apps
           </h3>
 
@@ -63,12 +63,12 @@ export function AppSwitcher() {
                   <TooltipTrigger asChild>
                     <button
                       onClick={() => handleAppClick(app.route)}
-                      className="flex flex-col items-center justify-center p-3 rounded-lg hover:bg-white/10 hover:scale-[1.03] active:scale-95 transition-all group"
+                      className="flex flex-col items-center justify-center p-3 rounded-lg hover:bg-accent hover:scale-[1.03] active:scale-95 transition-all group"
                     >
                       <div className="h-12 w-12 rounded-full bg-green-600/20 flex items-center justify-center mb-2 group-hover:bg-green-600/40 transition">
                         <app.icon className="h-6 w-6 text-green-400 group-hover:text-green-300 transition" />
                       </div>
-                      <span className="text-xs text-center font-medium text-white line-clamp-2">
+                      <span className="text-xs text-center font-medium text-foreground line-clamp-2">
                         {app.name}
                       </span>
                     </button>
@@ -76,7 +76,7 @@ export function AppSwitcher() {
 
                   <TooltipContent
                     side="bottom"
-                    className="text-white bg-black/80 border border-white/20 backdrop-blur-md"
+                    className="text-foreground bg-popover border border-border backdrop-blur-md"
                   >
                     <p className="text-xs">{app.description || app.name}</p>
                   </TooltipContent>

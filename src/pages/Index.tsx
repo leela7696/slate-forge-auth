@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   ShieldCheck,
   Zap,
@@ -14,7 +15,7 @@ import {
 
 export default function Index() {
   return (
-    <div className="min-h-screen bg-[#071d12] text-white relative overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       
       {/* Animated Background Glow */}
       <div className="absolute inset-0 pointer-events-none">
@@ -23,7 +24,7 @@ export default function Index() {
       </div>
 
       {/* Header */}
-      <header className="border-b border-white/10 backdrop-blur-md bg-black/20 sticky top-0 z-50">
+      <header className="border-b border-border backdrop-blur-md bg-popover sticky top-0 z-50">
         <div className="container mx-auto px-4 lg:px-8 py-3 flex justify-between items-center">
           
           {/* Updated Logo */}
@@ -35,28 +36,31 @@ export default function Index() {
 
           {/* Navigation Links */}
           <nav className="hidden md:flex gap-8 text-lg">
-            <Link to="/" className="hover:text-green-400 transition">Home</Link>
-            <Link to="/pricing" className="hover:text-green-400 transition">Pricing</Link>
-            <Link to="/features" className="hover:text-green-400 transition">Features</Link>
-            <Link to="/contact" className="hover:text-green-400 transition">Contact</Link>
+            <Link to="/" className="hover:text-primary transition">Home</Link>
+            <Link to="/pricing" className="hover:text-primary transition">Pricing</Link>
+            <Link to="/features" className="hover:text-primary transition">Features</Link>
+            <Link to="/contact" className="hover:text-primary transition">Contact</Link>
           </nav>
 
-          {/* Buttons */}
-          <div className="flex gap-3">
+          {/* Buttons + Theme toggle */}
+          <div className="flex gap-3 items-center">
             <Link to="/auth">
               <Button
                 size="lg"
-                className="text-base px-8 py-3 rounded-xl bg-transparent text-white border border-white/40 hover:border-white hover:bg-white/10 backdrop-blur-sm transition-all"
+                className="text-base px-8 py-3 rounded-xl bg-transparent text-foreground border border-border hover:bg-accent backdrop-blur-sm transition-all"
               >
                 Log In
               </Button>
             </Link>
 
             <Link to="/auth">
-              <Button className="text-base gap-2 bg-green-600 hover:bg-green-500">
+              <Button className="text-base gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
                 Get Started <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
           </div>
         </div>
       </header>

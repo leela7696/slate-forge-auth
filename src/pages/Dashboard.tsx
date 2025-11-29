@@ -48,7 +48,7 @@ function DashboardContent() {
   }, [displayName]);
 
   return (
-    <div className="min-h-screen flex w-full bg-[#071d12] relative overflow-hidden text-white">
+    <div className="min-h-screen flex w-full bg-background text-foreground relative overflow-hidden">
 
       {/* glowing background like auth */}
       <div className="absolute inset-0 pointer-events-none">
@@ -69,14 +69,14 @@ function DashboardContent() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 rounded-full border border-white/30 text-white hover:bg-white/10 backdrop-blur-sm"
+                  className="h-10 w-10 rounded-full border border-border text-foreground hover:bg-accent hover:text-accent-foreground"
                   onClick={toggleSidebar}
                 >
                   <ToggleIcon className="h-5 w-5" />
                 </Button>
                 <div>
-                  <h1 className="text-3xl font-bold text-white">Welcome back, {displayName}</h1>
-                  <p className="text-white/70 mt-1">Here’s what’s happening with your account today</p>
+                  <h1 className="text-3xl font-bold text-foreground">Welcome back, {displayName}</h1>
+                  <p className="text-muted-foreground mt-1">Here’s what’s happening with your account today</p>
                 </div>
               </div>
             </div>
@@ -93,16 +93,16 @@ function DashboardContent() {
                 { title: "Audit Events", value: "3,456", change: "Last 30 days", icon: FileText },
                 { title: "Growth", value: "+24.5%", change: "vs last quarter", icon: TrendingUp },
               ].map((stat, i) => (
-                <Card key={i} className="bg-white/10 border border-white/20 backdrop-blur-xl shadow-xl hover:shadow-green-500/20 transition">
+                <Card key={i} className="bg-card border border-border shadow-xl hover:shadow-green-500/20 transition">
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-white/80">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
                       {stat.title}
                     </CardTitle>
                     <stat.icon className="h-5 w-5 text-green-400" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-white">{stat.value}</div>
-                    <p className="text-sm text-white/70 mt-1">{stat.change}</p>
+                    <div className="text-3xl font-bold text-foreground">{stat.value}</div>
+                    <p className="text-sm text-muted-foreground mt-1">{stat.change}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -111,9 +111,9 @@ function DashboardContent() {
             {/* Dual Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-              <Card className="bg-white/10 border border-white/20 backdrop-blur-xl shadow-xl">
+              <Card className="bg-card border border-border shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-white">Recent Activity</CardTitle>
+                  <CardTitle className="text-foreground">Recent Activity</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -122,11 +122,11 @@ function DashboardContent() {
                       { label: "Profile updated", time: "15 minutes ago" },
                       { label: "Security settings changed", time: "1 hour ago" },
                     ].map((item, i) => (
-                      <div key={i} className="flex items-start gap-4 p-3 rounded-lg hover:bg-white/10 transition">
+                      <div key={i} className="flex items-start gap-4 p-3 rounded-lg hover:bg-accent transition">
                         <div className="w-2 h-2 rounded-full bg-green-400 mt-2" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-white">{item.label}</p>
-                          <p className="text-xs text-white/70">{item.time}</p>
+                          <p className="text-sm font-medium text-foreground">{item.label}</p>
+                          <p className="text-xs text-muted-foreground">{item.time}</p>
                         </div>
                       </div>
                     ))}
@@ -134,9 +134,9 @@ function DashboardContent() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white/10 border border-white/20 backdrop-blur-xl shadow-xl">
+              <Card className="bg-card border border-border shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-white">Quick Stats</CardTitle>
+                  <CardTitle className="text-foreground">Quick Stats</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -147,8 +147,8 @@ function DashboardContent() {
                       ["Failed Logins", "7"],
                     ].map(([k, v], idx) => (
                       <div key={idx} className="flex justify-between items-center">
-                        <span className="text-sm text-white/70">{k}</span>
-                        <span className="text-sm font-medium text-white">{v}</span>
+                        <span className="text-sm text-muted-foreground">{k}</span>
+                        <span className="text-sm font-medium text-foreground">{v}</span>
                       </div>
                     ))}
                   </div>
