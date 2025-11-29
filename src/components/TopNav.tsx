@@ -13,7 +13,7 @@ export function TopNav() {
       "
     >
       <div className="flex h-full items-center justify-between w-full px-6">
-
+        
         {/* Logo */}
         <div className="flex items-center gap-3">
           <img
@@ -28,11 +28,28 @@ export function TopNav() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Right Section */}
+        <div className="flex items-center gap-3">
+
+          {/* Animated divider */}
+          <div className="hidden md:block w-px h-6 bg-green-500/30" />
+
+          {/* App Switcher */}
           <AppSwitcher />
+
+          {/* Profile Menu */}
           <ProfileMenu />
         </div>
       </div>
+
+      {/* Animated neon bottom glow */}
+      <div
+        className="
+          absolute bottom-0 left-0 w-full h-[2px]
+          bg-gradient-to-r from-transparent via-green-400 to-transparent
+          opacity-60 animate-pulse
+        "
+      />
     </div>
   );
 }
