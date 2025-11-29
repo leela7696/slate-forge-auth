@@ -23,6 +23,9 @@ async function checkPermission(supabase: any, userId: string, module: string, ac
   const { data: user } = await supabase.from('users').select('role').eq('id', userId).single();
   if (!user) return false;
   
+  // System Admin has all permissions
+  if (user.role === 'System Admin') return true;
+  
   const { data: roleData } = await supabase.from('roles').select('id').eq('name', user.role).single();
   if (!roleData) return false;
   
