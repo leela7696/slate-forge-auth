@@ -27,7 +27,7 @@ export const PermissionProtectedRoute = ({
   }
 
   if (!hasPermission(module, requiredAction)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/403" replace />;
   }
 
   return <Outlet />;

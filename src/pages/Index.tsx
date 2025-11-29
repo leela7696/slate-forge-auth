@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { CookieConsentDialog } from "@/components/CookieConsentDialog";
 import {
   ShieldCheck,
   Zap,
@@ -14,6 +16,7 @@ import {
 } from "lucide-react";
 
 export default function Index() {
+  const [manageOpen, setManageOpen] = useState(false);
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       
@@ -171,12 +174,26 @@ export default function Index() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 bg-black/20 backdrop-blur-md">
+      <footer className="border-t border-border bg-popover backdrop-blur-md">
         <div className="container mx-auto px-4 lg:px-8 py-10 flex flex-col md:flex-row justify-between items-center gap-4">
           <img src="/slateai-logo.png" alt="Slate AI" className="w-32 h-auto rounded-xl opacity-80" />
-          <p className="text-gray-400 text-sm">&copy; 2025 Slate AI. All rights reserved.</p>
+          <div className="flex items-center gap-4 text-sm">
+            <Link to="/terms-and-conditions" className="text-muted-foreground hover:text-primary underline">Terms & Conditions</Link>
+            <Link to="/privacy-policy" className="text-muted-foreground hover:text-primary underline">Privacy Policy</Link>
+            <Link to="/cookie-policy" className="text-muted-foreground hover:text-primary underline">Cookie Policy</Link>
+            <button
+              className="text-muted-foreground hover:text-primary underline"
+              onClick={() => setManageOpen(true)}
+            >
+              Manage Cookie Preferences
+            </button>
+          </div>
+          <p className="text-muted-foreground text-sm">&copy; 2025 Slate AI. All rights reserved.</p>
         </div>
       </footer>
+
+      {/* Cookie Consent Dialog mount (shows if no choice; can be forced open) */}
+      <CookieConsentDialog forceOpen={manageOpen} onOpenChange={(o) => !o && setManageOpen(false)} />
     </div>
   );
 }

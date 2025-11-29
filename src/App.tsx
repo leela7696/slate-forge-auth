@@ -17,6 +17,12 @@ import AuditLogs from "./pages/admin/AuditLogs";
 import RBAC from "./pages/admin/RBAC";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import CookiePolicy from "./pages/CookiePolicy";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Error403 from "./pages/Error403";
+import Error500 from "./pages/Error500";
+import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -27,14 +33,20 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <GlobalErrorBoundary>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/verify-otp" element={<VerifyOtp />} />
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/cookie-policy" element={<CookiePolicy />} />
+            <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/403" element={<Error403 />} />
+            <Route path="/500" element={<Error500 />} />
             
             {/* Protected Routes */}
-            <Route element={<ProtectedRoute />}>
+            <Route element={<ProtectedRoute />}> 
               <Route element={<PermissionProtectedRoute module="Dashboard" />}>
                 <Route path="/dashboard" element={<Dashboard />} />
               </Route>
@@ -59,9 +71,11 @@ const App = () => (
               </Route>
             </Route>
 
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
+            {/* Catch-all route -> /404 */}
+            <Route path="/404" element={<NotFound />} />
+            <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
+          </GlobalErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

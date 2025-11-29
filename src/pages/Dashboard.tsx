@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopNav } from "@/components/TopNav";
-import { authStorage } from "@/lib/auth";
+import { authStorage, callEdgeFunction } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Users, FileText, TrendingUp, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { ProfileCompletionModal } from "@/components/ProfileCompletionModal";
 import { ProfileCompletionReminder } from "@/components/ProfileCompletionReminder";
 import { calculateProfileCompletion, shouldShowProfileCompletionPopup } from "@/lib/profile-completion";
+import { formatDistanceToNow } from "date-fns";
+import { CookieConsentDialog } from "@/components/CookieConsentDialog";
 
 export default function Dashboard() {
   return (
@@ -30,6 +32,31 @@ function DashboardContent() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const profileCompletion = calculateProfileCompletion(user);
 
+  // Dashboard metrics state
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [activeSessionsToday, setActiveSessionsToday] = useState<number>(0);
+  const [auditEvents30d, setAuditEvents30d] = useState<number>(0);
+  const [growthPercent, setGrowthPercent] = useState<number>(0);
+
+  // Recent activity
+  type AuditLog = {
+    id: string;
+    actor_email: string | null;
+    action: string;
+    module: string;
+    success: boolean;
+    created_at: string;
+    target_summary?: string | null;
+  };
+  const [recentActivity, setRecentActivity] = useState<AuditLog[]>([]);
+
+  // Quick stats
+  const [adminUsersCount, setAdminUsersCount] = useState<number>(0);
+  const [standardUsersCount, setStandardUsersCount] = useState<number>(0);
+  const [failedLoginsToday, setFailedLoginsToday] = useState<number>(0);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.localStorage.getItem("justLoggedIn") !== "true") return;
@@ -46,6 +73,117 @@ function DashboardContent() {
       setTimeout(() => setShowProfileModal(true), 500);
     }
   }, [displayName]);
+
+  useEffect(() => {
+    // Fetch dashboard metrics and activity
+    const fetchAll = async () => {
+      setStatsLoading(true);
+      setStatsError(null);
+      try {
+        // Helpers for date ranges
+        const now = new Date();
+        const isoNow = now.toISOString();
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const isoStartOfToday = startOfToday.toISOString();
+        const start30DaysAgo = new Date();
+        start30DaysAgo.setDate(start30DaysAgo.getDate() - 30);
+        const isoStart30DaysAgo = start30DaysAgo.toISOString();
+        const start7DaysAgo = new Date();
+        start7DaysAgo.setDate(start7DaysAgo.getDate() - 7);
+        const isoStart7DaysAgo = start7DaysAgo.toISOString();
+        const start14DaysAgo = new Date();
+        start14DaysAgo.setDate(start14DaysAgo.getDate() - 14);
+        const isoStart14DaysAgo = start14DaysAgo.toISOString();
+
+        // Total users (use get-users count)
+        const usersParams = new URLSearchParams({ page: "1", limit: "1" });
+        const usersData = await callEdgeFunction(`get-users?${usersParams.toString()}`);
+        setTotalUsers(usersData?.total || 0);
+
+        // Active sessions today = count of USER_LOGIN logs today
+        const loginParams = new URLSearchParams({
+          page: "1",
+          pageSize: "1",
+          action: "USER_LOGIN",
+          startDate: isoStartOfToday,
+          endDate: isoNow,
+        });
+        const loginData = await callEdgeFunction(`get-audit-logs?${loginParams.toString()}`);
+        setActiveSessionsToday(loginData?.total || 0);
+
+        // Audit events (last 30 days)
+        const audits30Params = new URLSearchParams({
+          page: "1",
+          pageSize: "1",
+          startDate: isoStart30DaysAgo,
+          endDate: isoNow,
+        });
+        const audits30Data = await callEdgeFunction(`get-audit-logs?${audits30Params.toString()}`);
+        setAuditEvents30d(audits30Data?.total || 0);
+
+        // Growth = new users last 7d vs previous 7d
+        const createdPrevParams = new URLSearchParams({
+          page: "1",
+          pageSize: "1",
+          action: "USER_CREATED",
+          startDate: isoStart14DaysAgo,
+          endDate: isoStart7DaysAgo,
+        });
+        const createdPrevData = await callEdgeFunction(`get-audit-logs?${createdPrevParams.toString()}`);
+        const prevCount = createdPrevData?.total || 0;
+
+        const createdCurParams = new URLSearchParams({
+          page: "1",
+          pageSize: "1",
+          action: "USER_CREATED",
+          startDate: isoStart7DaysAgo,
+          endDate: isoNow,
+        });
+        const createdCurData = await callEdgeFunction(`get-audit-logs?${createdCurParams.toString()}`);
+        const curCount = createdCurData?.total || 0;
+        const growth = prevCount === 0 ? (curCount > 0 ? 100 : 0) : ((curCount - prevCount) / prevCount) * 100;
+        setGrowthPercent(Number.isFinite(growth) ? Math.round(growth * 10) / 10 : 0);
+
+        // Recent activity (latest 5 logs)
+        const recentParams = new URLSearchParams({ page: "1", pageSize: "5" });
+        const recentData = await callEdgeFunction(`get-audit-logs?${recentParams.toString()}`);
+        setRecentActivity(recentData?.logs || []);
+
+        // Quick stats
+        // Admin users (Admin + System Admin)
+        const adminParams = new URLSearchParams({ page: "1", limit: "1", role: "Admin" });
+        const sysAdminParams = new URLSearchParams({ page: "1", limit: "1", role: "System Admin" });
+        const [adminData, sysAdminData] = await Promise.all([
+          callEdgeFunction(`get-users?${adminParams.toString()}`),
+          callEdgeFunction(`get-users?${sysAdminParams.toString()}`),
+        ]);
+        setAdminUsersCount((adminData?.total || 0) + (sysAdminData?.total || 0));
+
+        // Standard users (role: User)
+        const userRoleParams = new URLSearchParams({ page: "1", limit: "1", role: "User" });
+        const stdUsersData = await callEdgeFunction(`get-users?${userRoleParams.toString()}`);
+        setStandardUsersCount(stdUsersData?.total || 0);
+
+        // Failed logins today
+        const failedParams = new URLSearchParams({
+          page: "1",
+          pageSize: "1",
+          action: "USER_LOGIN_FAILED",
+          startDate: isoStartOfToday,
+          endDate: isoNow,
+        });
+        const failedData = await callEdgeFunction(`get-audit-logs?${failedParams.toString()}`);
+        setFailedLoginsToday(failedData?.total || 0);
+      } catch (err: any) {
+        console.error("Failed to load dashboard data", err);
+        setStatsError(err?.message || "Failed to load dashboard data");
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+    fetchAll();
+  }, []);
 
   return (
     <div className="min-h-screen flex w-full bg-background text-foreground relative overflow-hidden">
@@ -88,10 +226,10 @@ function DashboardContent() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { title: "Total Users", value: "1,234", change: "+12% from last month", icon: Users },
-                { title: "Active Sessions", value: "89", change: "Currently online", icon: Activity },
-                { title: "Audit Events", value: "3,456", change: "Last 30 days", icon: FileText },
-                { title: "Growth", value: "+24.5%", change: "vs last quarter", icon: TrendingUp },
+                { title: "Total Users", value: statsLoading ? "—" : totalUsers.toLocaleString(), change: statsLoading ? "Loading…" : "Organization total", icon: Users },
+                { title: "Active Sessions", value: statsLoading ? "—" : activeSessionsToday.toLocaleString(), change: statsLoading ? "Loading…" : "Logins today", icon: Activity },
+                { title: "Audit Events", value: statsLoading ? "—" : auditEvents30d.toLocaleString(), change: statsLoading ? "Loading…" : "Last 30 days", icon: FileText },
+                { title: "Growth", value: statsLoading ? "—" : `${growthPercent}%`, change: statsLoading ? "Loading…" : "New users vs prev 7d", icon: TrendingUp },
               ].map((stat, i) => (
                 <Card key={i} className="bg-card border border-border shadow-xl hover:shadow-green-500/20 transition">
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -117,16 +255,19 @@ function DashboardContent() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {[
-                      { label: "New user registered", time: "2 minutes ago" },
-                      { label: "Profile updated", time: "15 minutes ago" },
-                      { label: "Security settings changed", time: "1 hour ago" },
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-start gap-4 p-3 rounded-lg hover:bg-accent transition">
-                        <div className="w-2 h-2 rounded-full bg-green-400 mt-2" />
+                    {recentActivity.length === 0 && (
+                      <p className="text-sm text-muted-foreground">{statsLoading ? "Loading activity…" : "No recent activity"}</p>
+                    )}
+                    {recentActivity.map((log) => (
+                      <div key={log.id} className="flex items-start gap-4 p-3 rounded-lg hover:bg-accent transition">
+                        <div className={`w-2 h-2 rounded-full mt-2 ${log.success ? "bg-green-400" : "bg-destructive"}`} />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">{item.label}</p>
-                          <p className="text-xs text-muted-foreground">{item.time}</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {log.action.replace(/_/g, " ")}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {log.actor_email || "system"} • {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -141,10 +282,10 @@ function DashboardContent() {
                 <CardContent>
                   <div className="space-y-4">
                     {[
-                      ["Admin Users", "12"],
-                      ["Standard Users", "1,222"],
-                      ["Active Today", "342"],
-                      ["Failed Logins", "7"],
+                      ["Admin Users", statsLoading ? "—" : adminUsersCount.toLocaleString()],
+                      ["Standard Users", statsLoading ? "—" : standardUsersCount.toLocaleString()],
+                      ["Active Today", statsLoading ? "—" : activeSessionsToday.toLocaleString()],
+                      ["Failed Logins", statsLoading ? "—" : failedLoginsToday.toLocaleString()],
                     ].map(([k, v], idx) => (
                       <div key={idx} className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">{k}</span>
@@ -160,6 +301,8 @@ function DashboardContent() {
       </div>
 
       <ProfileCompletionModal open={showProfileModal} onOpenChange={setShowProfileModal} />
+      {/* Cookie Consent Dialog mount on dashboard (shows if no choice yet) */}
+      <CookieConsentDialog />
     </div>
   );
 }
