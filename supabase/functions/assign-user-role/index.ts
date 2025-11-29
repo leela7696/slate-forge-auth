@@ -94,7 +94,7 @@ serve(async (req) => {
     // Get target user info
     const { data: targetUser } = await supabaseAdmin
       .from('users')
-      .select('email, role')
+      .select('email, role, name')
       .eq('id', userId)
       .single();
 
@@ -131,6 +131,36 @@ serve(async (req) => {
       ip_address: req.headers.get('x-forwarded-for') || 'unknown',
       user_agent: req.headers.get('user-agent') || 'unknown',
     });
+
+    // Send role change notification to target user
+    const { error: notifyError } = await supabaseAdmin.functions.invoke('send-email', {
+      body: {
+        to: targetUser.email,
+        subject: 'Your role has been updated',
+        template: 'role_change_notification',
+        variables: {
+          user_name: targetUser.name || 'there',
+          role_old: targetUser.role,
+          role_new: role,
+          app_name: Deno.env.get('APP_NAME') || 'Slate AI',
+          support_email: Deno.env.get('SUPPORT_EMAIL') || 'support@slate.ai',
+          dashboard_url: Deno.env.get('APP_DASHBOARD_URL') || 'https://app.slate.ai',
+        },
+      },
+    });
+
+    if (notifyError) {
+      console.error('Failed to send role change email:', notifyError);
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'SMTP_SEND_FAILED',
+        module: 'rbac',
+        actor_email: targetUser.email,
+        success: false,
+        details: { error: notifyError.message },
+        ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+        user_agent: req.headers.get('user-agent') || 'unknown',
+      });
+    }
 
     return new Response(
       JSON.stringify({ success: true, user: data }),

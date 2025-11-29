@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,20 +45,21 @@ async function hashPassword(password: string): Promise<string> {
     .join('');
 }
 
-async function sendOTPEmail(email: string, otp: string) {
-  const client = new SMTPClient({
-    connection: {
-      hostname: Deno.env.get('SMTP_HOST') ?? '', port: parseInt(Deno.env.get('SMTP_PORT') ?? '587'), tls: true,
-      auth: { username: Deno.env.get('SMTP_USER') ?? '', password: Deno.env.get('SMTP_PASS') ?? '' },
+async function sendOTPEmail(supabase: any, email: string, otp: string, name?: string) {
+  await supabase.functions.invoke('send-email', {
+    body: {
+      to: email,
+      subject: 'Slate AI – Password Reset Code',
+      template: 'otp_verification',
+      variables: {
+        user_name: name || 'there',
+        otp,
+        app_name: Deno.env.get('APP_NAME') || 'Slate AI',
+        support_email: Deno.env.get('SUPPORT_EMAIL') || 'support@slate.ai',
+        dashboard_url: Deno.env.get('APP_DASHBOARD_URL') || 'https://app.slate.ai',
+      },
     },
   });
-
-  await client.send({
-    from: Deno.env.get('SMTP_FROM') ?? 'Slate AI <no-reply@slateai.com>',
-    to: email, subject: 'Slate AI – Password Reset OTP',
-    html: `<div style="font-family:Arial;padding:20px;max-width:600px;margin:0 auto"><h1>Password Reset</h1><p>Your OTP:</p><div style="background:#f4f4f4;padding:20px;text-align:center;margin:20px 0"><div style="font-size:32px;font-weight:bold;color:#2563eb;letter-spacing:4px">${otp}</div></div><p>Expires in ${OTP_EXPIRY_MINUTES} minutes.</p></div>`,
-  });
-  await client.close();
 }
 
 serve(async (req) => {
@@ -72,7 +72,7 @@ serve(async (req) => {
     if (action === 'send-otp') {
       if (!email) throw new Error('Email required');
 
-      const { data: user } = await supabase.from('users').select('id, email, status').eq('email', email.toLowerCase()).maybeSingle();
+      const { data: user } = await supabase.from('users').select('id, email, status, name').eq('email', email.toLowerCase()).maybeSingle();
       if (!user || user.status !== 'active') {
         return new Response(JSON.stringify({ error: 'User not found' }), 
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -87,7 +87,7 @@ serve(async (req) => {
         resend_after: new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000).toISOString(),
       });
 
-      await sendOTPEmail(email, otpCode);
+      await sendOTPEmail(supabase, email, otpCode, user.name);
       return new Response(JSON.stringify({ success: true, message: 'OTP sent' }), 
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -118,6 +118,23 @@ serve(async (req) => {
 
       await supabase.from('users').update({ password_hash: await hashPassword(newPassword) }).eq('id', request.user_id);
       await supabase.from('password_change_requests').delete().eq('id', request.id);
+      // Send password change confirmation
+      const { data: updatedUser } = await supabase.from('users').select('email, name').eq('id', request.user_id).single();
+      if (updatedUser?.email) {
+        await supabase.functions.invoke('send-email', {
+          body: {
+            to: updatedUser.email,
+            subject: 'Your password has been changed',
+            template: 'password_change_confirmation',
+            variables: {
+              user_name: updatedUser.name || 'there',
+              app_name: Deno.env.get('APP_NAME') || 'Slate AI',
+              support_email: Deno.env.get('SUPPORT_EMAIL') || 'support@slate.ai',
+              dashboard_url: Deno.env.get('APP_DASHBOARD_URL') || 'https://app.slate.ai',
+            },
+          },
+        });
+      }
       return new Response(JSON.stringify({ success: true, message: 'Password reset successful' }), 
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }

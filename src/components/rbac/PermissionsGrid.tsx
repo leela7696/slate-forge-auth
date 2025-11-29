@@ -43,6 +43,7 @@ const MODULES = [
   "RBAC",
   "Analytics",
   "Settings",
+  "Notifications Broadcast",
 ];
 
 export function PermissionsGrid() {

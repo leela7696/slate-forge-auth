@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Switch } from "@/components/ui/switch";
+import { useNotifications } from "@/lib/notifications";
 
 export default function Settings() {
   return (
@@ -20,6 +22,7 @@ export default function Settings() {
 function SettingsContent() {
   const { theme, setTheme, resolvedTheme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { soundEnabled, setSoundEnabled } = useNotifications();
 
   useEffect(() => setMounted(true), []);
 
@@ -76,6 +79,22 @@ function SettingsContent() {
                       <SelectItem value="system">System</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Notifications */}
+            <Card className="bg-card border border-border shadow-lg">
+              <CardHeader>
+                <CardTitle>Notifications</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Notification Sound</Label>
+                    <p className="text-muted-foreground text-sm">Play a sound for new notifications (default: ON)</p>
+                  </div>
+                  <Switch checked={soundEnabled} onCheckedChange={setSoundEnabled as any} />
                 </div>
               </CardContent>
             </Card>

@@ -1,6 +1,7 @@
 import { ProfileMenu } from "./ProfileMenu";
 import { AppSwitcher } from "./AppSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
+import { NotificationBell } from "./NotificationBell";
 
 export function TopNav() {
   return (
@@ -31,6 +32,9 @@ export function TopNav() {
 
         {/* Right Section */}
         <div className="flex items-center gap-3">
+
+          {/* Notifications */}
+          <NotificationBell />
 
           {/* Animated divider */}
           <div className="hidden md:block w-px h-6 bg-green-500/30" />

@@ -1,4 +1,4 @@
-import { LayoutDashboard, User, Users, FileText, LogOut, Shield } from "lucide-react";
+import { LayoutDashboard, User, Users, FileText, LogOut, Shield, Megaphone } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -35,6 +35,7 @@ export function AppSidebar() {
     { title: "Users", url: "/admin/users", icon: Users, module: "User Management" },
     { title: "Audit Logs", url: "/admin/audit-logs", icon: FileText, module: "Audit Logs" },
     { title: "RBAC", url: "/admin/rbac", icon: Shield, module: "RBAC" },
+    { title: "Broadcast", url: "/admin/notifications-broadcast", icon: Megaphone, module: "Notifications Broadcast" },
   ].filter(item => canViewModule(item.module));
 
   // Filter main items based on permissions too

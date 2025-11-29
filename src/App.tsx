@@ -16,6 +16,8 @@ import Users from "./pages/admin/Users";
 import AuditLogs from "./pages/admin/AuditLogs";
 import RBAC from "./pages/admin/RBAC";
 import Settings from "./pages/Settings";
+import NotificationsPage from "./pages/Notifications";
+import NotificationsBroadcast from "./pages/admin/NotificationsBroadcast";
 import NotFound from "./pages/NotFound";
 import CookiePolicy from "./pages/CookiePolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
@@ -23,6 +25,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Error403 from "./pages/Error403";
 import Error500 from "./pages/Error500";
 import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
+import { NotificationsProvider } from "@/lib/notifications";
 
 const queryClient = new QueryClient();
 
@@ -33,8 +36,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <NotificationsProvider>
           <GlobalErrorBoundary>
-          <Routes>
+  <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/verify-otp" element={<VerifyOtp />} />
@@ -56,18 +60,26 @@ const App = () => (
               <Route element={<PermissionProtectedRoute module="Settings" />}>
                 <Route path="/settings" element={<Settings />} />
               </Route>
+              {/* Notifications accessible to any authenticated user */}
+              <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
 
             {/* Admin Routes - Protected by permissions */}
             <Route element={<ProtectedRoute />}>
-              <Route element={<PermissionProtectedRoute module="User Management" />}>
+              <Route element={<PermissionProtectedRoute module="User Management" />}> 
                 <Route path="/admin/users" element={<Users />} />
               </Route>
-              <Route element={<PermissionProtectedRoute module="Audit Logs" />}>
+              <Route element={<PermissionProtectedRoute module="Audit Logs" />}> 
                 <Route path="/admin/audit-logs" element={<AuditLogs />} />
               </Route>
-              <Route element={<PermissionProtectedRoute module="RBAC" />}>
+              <Route element={<PermissionProtectedRoute module="RBAC" />}> 
                 <Route path="/admin/rbac" element={<RBAC />} />
+              </Route>
+              {/* Admin Broadcast - restrict by role first, then module */}
+              <Route element={<ProtectedRoute requiredRoles={["Admin", "System Admin"]} />}> 
+                <Route element={<PermissionProtectedRoute module="Notifications Broadcast" requiredAction="create" />}> 
+                  <Route path="/admin/notifications-broadcast" element={<NotificationsBroadcast />} />
+                </Route>
               </Route>
             </Route>
 
@@ -76,6 +88,7 @@ const App = () => (
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
           </GlobalErrorBoundary>
+          </NotificationsProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

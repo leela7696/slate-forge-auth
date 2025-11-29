@@ -172,6 +172,21 @@ serve(async (req) => {
         throw createError;
       }
       newUser = createdUser;
+
+      // Send welcome email to newly created user
+      await supabaseAdmin.functions.invoke('send-email', {
+        body: {
+          to: newUser.email,
+          subject: `Welcome to ${Deno.env.get('APP_NAME') || 'Slate AI'}`,
+          template: 'welcome_email',
+          variables: {
+            user_name: newUser.name || 'there',
+            app_name: Deno.env.get('APP_NAME') || 'Slate AI',
+            support_email: Deno.env.get('SUPPORT_EMAIL') || 'support@slate.ai',
+            dashboard_url: Deno.env.get('APP_DASHBOARD_URL') || 'https://app.slate.ai',
+          },
+        },
+      });
     }
 
     // Delete OTP request

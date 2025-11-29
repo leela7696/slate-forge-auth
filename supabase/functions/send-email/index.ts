@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { getEmailHtml, TemplateName, TemplateVars } from "../_shared/emailTemplates.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,7 +10,9 @@ const corsHeaders = {
 interface EmailRequest {
   to: string;
   subject: string;
-  html: string;
+  html?: string;
+  template?: TemplateName;
+  variables?: TemplateVars;
 }
 
 serve(async (req) => {
@@ -18,14 +21,16 @@ serve(async (req) => {
   }
 
   try {
-    const { to, subject, html }: EmailRequest = await req.json();
+    const { to, subject, html, template, variables }: EmailRequest = await req.json();
 
-    if (!to || !subject || !html) {
+    if (!to || !subject || (!html && !template)) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const renderedHtml = html || getEmailHtml(template as TemplateName, (variables || {}));
 
     // Initialize SMTP client
     const client = new SMTPClient({
@@ -45,7 +50,7 @@ serve(async (req) => {
       from: Deno.env.get('SMTP_FROM') ?? 'Slate AI <no-reply@slateai.com>',
       to,
       subject,
-      html,
+      html: renderedHtml,
     });
 
     await client.close();

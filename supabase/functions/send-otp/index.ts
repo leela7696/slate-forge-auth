@@ -130,22 +130,19 @@ serve(async (req) => {
       throw insertError;
     }
 
-    // Send OTP via email using Supabase client
+    // Send OTP via email using template
     const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
       body: {
         to: email,
         subject: 'Your Slate AI verification code',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #1e293b;">Welcome to Slate AI</h2>
-            <p>Your verification code is:</p>
-            <div style="background: #f1f5f9; padding: 20px; text-align: center; margin: 20px 0;">
-              <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0f172a;">${otp}</span>
-            </div>
-            <p style="color: #64748b;">This code expires in ${expiryMinutes} minutes.</p>
-            <p style="color: #64748b; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
-          </div>
-        `,
+        template: 'otp_verification',
+        variables: {
+          user_name: name,
+          otp,
+          app_name: Deno.env.get('APP_NAME') || 'Slate AI',
+          support_email: Deno.env.get('SUPPORT_EMAIL') || 'support@slate.ai',
+          dashboard_url: Deno.env.get('APP_DASHBOARD_URL') || 'https://app.slate.ai',
+        },
       },
     });
 
