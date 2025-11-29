@@ -113,7 +113,7 @@ function ThemeOption({
 }: {
   value: "light" | "dark" | "system";
   label: string;
-  Icon: (props: { className?: string }) => JSX.Element;
+  Icon: React.ComponentType<{ className?: string }>;
   active?: boolean;
 }) {
   return (

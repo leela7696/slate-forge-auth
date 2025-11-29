@@ -78,7 +78,7 @@ serve(async (req) => {
     if (action === 'send-old-otp') {
       console.log('Sending old OTP for userId:', userId);
       
-      const { data: userData } = await supabase.from('users').select('email').eq('id', userId).single();
+      const { data: userData } = await supabase.from('users').select('email, name').eq('id', userId).single();
       if (!userData) {
         console.error('User not found:', userId);
         throw new Error('User not found');
