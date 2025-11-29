@@ -116,7 +116,7 @@ export function RolesTable() {
   };
 
   if (loading) {
-    return <div className="flex justify-center p-8 text-white/80">Loading roles...</div>;
+    return <div className="flex justify-center p-8">Loading roles...</div>;
   }
 
   return (
@@ -124,8 +124,8 @@ export function RolesTable() {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-semibold text-white">Roles</h2>
-            <p className="text-sm text-white/60">Manage system roles and their descriptions</p>
+            <h2 className="text-2xl font-semibold">Roles</h2>
+            <p className="text-sm text-muted-foreground">Manage system roles and their descriptions</p>
           </div>
           <Button onClick={() => handleOpenDialog()} className="gap-2">
             <Plus className="h-4 w-4" />
@@ -133,7 +133,7 @@ export function RolesTable() {
           </Button>
         </div>
 
-        <div className="rounded-lg border border-white/20 bg-white/5 backdrop-blur-xl shadow-[0_0_20px_rgba(34,197,94,0.15)]">
+        <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
