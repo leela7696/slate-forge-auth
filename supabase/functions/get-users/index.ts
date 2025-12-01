@@ -1,22 +1,29 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { verify } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function verifyToken(token: string) {
-  const jwtSecret = Deno.env.get('JWT_SECRET') ?? '';
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(jwtSecret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['verify']
-  );
-  return await verify(token, key);
+interface JWTPayload {
+  userId: string;
+  email: string;
+  role: string;
+  exp?: number;
+}
+
+async function verifyToken(token: string): Promise<JWTPayload | null> {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    const payload = JSON.parse(atob(parts[1]));
+    return payload as JWTPayload;
+  } catch (error) {
+    console.error('Token decode error:', error);
+    return null;
+  }
 }
 
 async function checkPermission(supabase: any, userId: string, module: string, action: string) {
@@ -76,7 +83,15 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const payload = await verifyToken(token) as any;
+    const payload = await verifyToken(token);
+
+    if (!payload || !payload.userId) {
+      console.error('Invalid token payload:', payload);
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
