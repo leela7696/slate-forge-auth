@@ -87,16 +87,15 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    const userToken = req.headers.get('x-user-token');
+    if (!userToken) {
       return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
+        JSON.stringify({ error: 'Missing user token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const payload = await verifyToken(token);
+    const payload = await verifyToken(userToken);
 
     if (!payload || !payload.userId) {
       return new Response(

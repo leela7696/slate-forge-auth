@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Search, Calendar, Download, Copy, Check } from "lucide-react";
-import { callEdgeFunction } from "@/lib/auth";
+import { authStorage, callEdgeFunction } from "@/lib/auth";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -80,7 +80,16 @@ export default function MyActivity() {
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
 
-      const response = await callEdgeFunction("get-my-activity", params);
+      const token = authStorage.getToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["x-user-token"] = token;
+      }
+
+      const response = await callEdgeFunction(`get-my-activity?${params.toString()}`, undefined, {
+        skipAuthHeader: true,
+        headers,
+      });
 
       setLogs(response.logs || []);
       setTotal(response.total || 0);
