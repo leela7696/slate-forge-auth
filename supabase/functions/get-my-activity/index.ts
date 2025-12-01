@@ -7,9 +7,10 @@ const corsHeaders = {
 };
 
 interface JWTPayload {
-  sub: string;
+  userId: string;
   email?: string;
   role?: string;
+  exp?: number;
 }
 
 async function verifyToken(token: string): Promise<JWTPayload | null> {
@@ -18,8 +19,16 @@ async function verifyToken(token: string): Promise<JWTPayload | null> {
     if (parts.length !== 3) return null;
     
     const payload = JSON.parse(atob(parts[1]));
+    
+    // Check expiration
+    if (payload.exp && payload.exp < Date.now() / 1000) {
+      console.error('Token expired');
+      return null;
+    }
+    
     return payload;
-  } catch {
+  } catch (error) {
+    console.error('Token verification error:', error);
     return null;
   }
 }
@@ -89,14 +98,14 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     const payload = await verifyToken(token);
 
-    if (!payload || !payload.sub) {
+    if (!payload || !payload.userId) {
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = payload.sub;
+    const userId = payload.userId;
 
     // Initialize Supabase client
     const supabaseAdmin = createClient(
