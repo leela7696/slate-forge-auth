@@ -87,17 +87,19 @@ serve(async (req) => {
   }
 
   try {
-    const userToken = req.headers.get('x-user-token');
-    if (!userToken) {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Missing user token' }),
+        JSON.stringify({ error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const payload = await verifyToken(userToken);
+    const token = authHeader.replace('Bearer ', '');
+    const payload = await verifyToken(token);
 
     if (!payload || !payload.userId) {
+      console.error('Invalid token payload:', payload);
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -105,6 +107,7 @@ serve(async (req) => {
     }
 
     const userId = payload.userId;
+    console.log('Fetching activity logs for user:', userId);
 
     // Initialize Supabase client
     const supabaseAdmin = createClient(
