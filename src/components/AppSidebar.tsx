@@ -1,4 +1,4 @@
-import { LayoutDashboard, User, Users, FileText, LogOut, Shield, Megaphone } from "lucide-react";
+import { LayoutDashboard, User, Users, FileText, LogOut, Shield, Megaphone, History } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -28,6 +28,7 @@ export function AppSidebar() {
   const mainItems = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, module: "Dashboard" },
     { title: "Profile", url: "/profile", icon: User, module: "Profile" },
+    { title: "My Activity", url: "/my-activity", icon: History, module: "My Activity" },
   ];
 
   // Build admin items based on actual permissions

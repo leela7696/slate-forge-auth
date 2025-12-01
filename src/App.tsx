@@ -18,6 +18,7 @@ import RBAC from "./pages/admin/RBAC";
 import Settings from "./pages/Settings";
 import NotificationsPage from "./pages/Notifications";
 import NotificationsBroadcast from "./pages/admin/NotificationsBroadcast";
+import MyActivity from "./pages/MyActivity";
 import NotFound from "./pages/NotFound";
 import CookiePolicy from "./pages/CookiePolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
@@ -59,6 +60,9 @@ const App = () => (
               </Route>
               <Route element={<PermissionProtectedRoute module="Settings" />}>
                 <Route path="/settings" element={<Settings />} />
+              </Route>
+              <Route element={<PermissionProtectedRoute module="My Activity" />}>
+                <Route path="/my-activity" element={<MyActivity />} />
               </Route>
               {/* Notifications accessible to any authenticated user */}
               <Route path="/notifications" element={<NotificationsPage />} />
