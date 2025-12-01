@@ -19,6 +19,13 @@ async function verifyToken(token: string): Promise<JWTPayload | null> {
     if (parts.length !== 3) return null;
     
     const payload = JSON.parse(atob(parts[1]));
+
+    // Optional expiration check (matches get-audit-logs behavior)
+    if (payload.exp && payload.exp < Date.now() / 1000) {
+      console.error('Token expired');
+      return null;
+    }
+    
     return payload as JWTPayload;
   } catch (error) {
     console.error('Token decode error:', error);
