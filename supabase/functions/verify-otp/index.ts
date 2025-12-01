@@ -124,23 +124,23 @@ serve(async (req) => {
       );
     }
 
-    // OTP is valid - check if user exists first
+    // OTP is valid - check if user exists first (including deleted users)
     const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('email', email.toLowerCase())
-      .eq('is_deleted', false)
       .maybeSingle();
 
     let newUser;
     
     if (existingUser) {
-      // User exists - update their password and reactivate if needed
+      // User exists - update their password and reactivate (including restoring deleted users)
       const { data: updatedUser, error: updateError } = await supabaseAdmin
         .from('users')
         .update({
           password_hash: otpRequest.password_hash,
           status: 'active',
+          is_deleted: false,
           last_login_at: new Date().toISOString(),
         })
         .eq('id', existingUser.id)
