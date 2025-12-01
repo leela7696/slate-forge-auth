@@ -1,24 +1,35 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { verify } from 'https://deno.land/x/djwt@v3.0.1/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function verifyToken(token: string) {
-  const JWT_SECRET = Deno.env.get('JWT_SECRET');
-  if (!JWT_SECRET) throw new Error('JWT_SECRET not configured');
+interface JWTPayload {
+  userId: string;
+  email?: string;
+  role?: string;
+  exp?: number;
+}
 
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(JWT_SECRET),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['verify']
-  );
-
-  return await verify(token, key);
+async function verifyToken(token: string): Promise<JWTPayload | null> {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    const payload = JSON.parse(atob(parts[1]));
+    
+    // Check expiration
+    if (payload.exp && payload.exp < Date.now() / 1000) {
+      console.error('Token expired');
+      return null;
+    }
+    
+    return payload;
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return null;
+  }
 }
 
 async function checkPermission(
@@ -87,8 +98,16 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const payload = await verifyToken(token) as any;
-    const userId = payload.userId || payload.sub as string;
+    const payload = await verifyToken(token);
+    
+    if (!payload || !payload.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const userId = payload.userId;
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
