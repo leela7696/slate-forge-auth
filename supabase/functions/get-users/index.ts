@@ -34,45 +34,74 @@ async function verifyToken(token: string): Promise<JWTPayload | null> {
 }
 
 async function checkPermission(supabase: any, userId: string, module: string, action: string) {
-  // Get user's role
-  const { data: user } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', userId)
-    .single();
-  
-  if (!user) return false;
-  
-  // System Admin and Admin have full access to user management
-  if (user.role === 'System Admin' || user.role === 'Admin') return true;
-  
-  // Get role ID
-  const { data: roleData } = await supabase
-    .from('roles')
-    .select('id')
-    .eq('name', user.role)
-    .single();
-  
-  if (!roleData) return false;
-  
-  // Check permission
-  const { data: permission } = await supabase
-    .from('permissions')
-    .select('*')
-    .eq('role_id', roleData.id)
-    .eq('module', module)
-    .single();
-  
-  if (!permission) return false;
-  
-  const fieldMap: Record<string, string> = {
-    'view': 'can_view',
-    'create': 'can_create',
-    'edit': 'can_edit',
-    'delete': 'can_delete'
-  };
-  
-  return permission[fieldMap[action]] === true;
+  try {
+    // Get user's role
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    if (userError) {
+      console.error('Error fetching user:', userError);
+      return false;
+    }
+    
+    if (!user) {
+      console.log('User not found:', userId);
+      return false;
+    }
+    
+    // System Admin and Admin have full access to user management
+    if (user.role === 'System Admin' || user.role === 'Admin') return true;
+    
+    // Get role ID
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', user.role)
+      .maybeSingle();
+    
+    if (roleError) {
+      console.error('Error fetching role:', roleError);
+      return false;
+    }
+    
+    if (!roleData) {
+      console.log('Role not found:', user.role);
+      return false;
+    }
+    
+    // Check permission
+    const { data: permission, error: permError } = await supabase
+      .from('permissions')
+      .select('*')
+      .eq('role_id', roleData.id)
+      .eq('module', module)
+      .maybeSingle();
+    
+    if (permError) {
+      console.error('Error fetching permission:', permError);
+      return false;
+    }
+    
+    if (!permission) {
+      console.log('Permission not found for role:', user.role, 'module:', module);
+      return false;
+    }
+    
+    const fieldMap: Record<string, string> = {
+      'view': 'can_view',
+      'create': 'can_create',
+      'edit': 'can_edit',
+      'delete': 'can_delete'
+    };
+    
+    return permission[fieldMap[action]] === true;
+  } catch (error) {
+    console.error('Exception in checkPermission:', error);
+    return false;
+  }
 }
 
 serve(async (req) => {
@@ -152,7 +181,10 @@ serve(async (req) => {
 
     const { data: users, error, count } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error querying users:', error);
+      throw error;
+    }
 
     return new Response(
       JSON.stringify({ 
