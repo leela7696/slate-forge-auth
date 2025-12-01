@@ -35,7 +35,31 @@ export const authStorage = {
 
 export const authHelpers = {
   isAuthenticated: (): boolean => {
-    return !!authStorage.getToken();
+    const token = authStorage.getToken();
+    if (!token) return false;
+    
+    // Validate token is a user JWT, not the anon key
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return false;
+      
+      const payload = JSON.parse(atob(parts[1]));
+      
+      // Check if token has userId (user JWTs have this, anon key doesn't)
+      if (!payload.userId) return false;
+      
+      // Check expiration
+      if (payload.exp && payload.exp < Date.now() / 1000) {
+        // Token expired, clean up
+        authHelpers.logout();
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Token validation error:', error);
+      return false;
+    }
   },
   
   hasRole: (requiredRoles: string[]): boolean => {
