@@ -58,12 +58,16 @@ export const authHelpers = {
 
 export const callEdgeFunction = async (
   functionName: string,
-  body?: any
+  body?: any,
+  options?: {
+    skipAuthHeader?: boolean;
+    headers?: Record<string, string>;
+  }
 ) => {
   const token = authStorage.getToken();
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...(options?.headers || {}) };
 
-  if (token) {
+  if (token && !options?.skipAuthHeader) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
