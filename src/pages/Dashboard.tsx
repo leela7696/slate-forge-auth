@@ -12,6 +12,7 @@ import { ProfileCompletionReminder } from "@/components/ProfileCompletionReminde
 import { calculateProfileCompletion, shouldShowProfileCompletionPopup } from "@/lib/profile-completion";
 import { formatDistanceToNow } from "date-fns";
 import { CookieConsentDialog } from "@/components/CookieConsentDialog";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function Dashboard() {
   return (
@@ -31,6 +32,9 @@ function DashboardContent() {
   
   const [showProfileModal, setShowProfileModal] = useState(false);
   const profileCompletion = calculateProfileCompletion(user);
+
+  // RBAC-aware visibility flags
+  const { canViewModule, loading: permsLoading } = usePermissions();
 
   // Dashboard metrics state
   const [statsLoading, setStatsLoading] = useState(true);
@@ -75,11 +79,16 @@ function DashboardContent() {
   }, [displayName]);
 
   useEffect(() => {
+    if (permsLoading) return;
+
     // Fetch dashboard metrics and activity
     const fetchAll = async () => {
       setStatsLoading(true);
       setStatsError(null);
       try {
+        const canViewUserManagement = canViewModule("User Management");
+        const canViewAuditLogs = canViewModule("Audit Logs");
+
         // Helpers for date ranges
         const now = new Date();
         const isoNow = now.toISOString();
@@ -96,85 +105,99 @@ function DashboardContent() {
         start14DaysAgo.setDate(start14DaysAgo.getDate() - 14);
         const isoStart14DaysAgo = start14DaysAgo.toISOString();
 
-        // Total users (use get-users count)
-        const usersParams = new URLSearchParams({ page: "1", limit: "1" });
-        const usersData = await callEdgeFunction(`get-users?${usersParams.toString()}`);
-        setTotalUsers(usersData?.total || 0);
+        // Total users and role-based counts only if allowed to view User Management
+        if (canViewUserManagement) {
+          const usersParams = new URLSearchParams({ page: "1", limit: "1" });
+          const usersData = await callEdgeFunction(`get-users?${usersParams.toString()}`);
+          setTotalUsers(usersData?.total || 0);
 
-        // Active sessions today = count of USER_LOGIN logs today
-        const loginParams = new URLSearchParams({
-          page: "1",
-          pageSize: "1",
-          action: "USER_LOGIN",
-          startDate: isoStartOfToday,
-          endDate: isoNow,
-        });
-        const loginData = await callEdgeFunction(`get-audit-logs?${loginParams.toString()}`);
-        setActiveSessionsToday(loginData?.total || 0);
+          // Admin users (Admin + System Admin)
+          const adminParams = new URLSearchParams({ page: "1", limit: "1", role: "Admin" });
+          const sysAdminParams = new URLSearchParams({ page: "1", limit: "1", role: "System Admin" });
+          const [adminData, sysAdminData] = await Promise.all([
+            callEdgeFunction(`get-users?${adminParams.toString()}`),
+            callEdgeFunction(`get-users?${sysAdminParams.toString()}`),
+          ]);
+          setAdminUsersCount((adminData?.total || 0) + (sysAdminData?.total || 0));
 
-        // Audit events (last 30 days)
-        const audits30Params = new URLSearchParams({
-          page: "1",
-          pageSize: "1",
-          startDate: isoStart30DaysAgo,
-          endDate: isoNow,
-        });
-        const audits30Data = await callEdgeFunction(`get-audit-logs?${audits30Params.toString()}`);
-        setAuditEvents30d(audits30Data?.total || 0);
+          // Standard users (role: User)
+          const userRoleParams = new URLSearchParams({ page: "1", limit: "1", role: "User" });
+          const stdUsersData = await callEdgeFunction(`get-users?${userRoleParams.toString()}`);
+          setStandardUsersCount(stdUsersData?.total || 0);
+        } else {
+          setTotalUsers(0);
+          setAdminUsersCount(0);
+          setStandardUsersCount(0);
+        }
 
-        // Growth = new users last 7d vs previous 7d
-        const createdPrevParams = new URLSearchParams({
-          page: "1",
-          pageSize: "1",
-          action: "USER_CREATED",
-          startDate: isoStart14DaysAgo,
-          endDate: isoStart7DaysAgo,
-        });
-        const createdPrevData = await callEdgeFunction(`get-audit-logs?${createdPrevParams.toString()}`);
-        const prevCount = createdPrevData?.total || 0;
+        // Audit-log-based metrics only if allowed to view Audit Logs
+        if (canViewAuditLogs) {
+          // Active sessions today = count of USER_LOGIN logs today
+          const loginParams = new URLSearchParams({
+            page: "1",
+            pageSize: "1",
+            action: "USER_LOGIN",
+            startDate: isoStartOfToday,
+            endDate: isoNow,
+          });
+          const loginData = await callEdgeFunction(`get-audit-logs?${loginParams.toString()}`);
+          setActiveSessionsToday(loginData?.total || 0);
 
-        const createdCurParams = new URLSearchParams({
-          page: "1",
-          pageSize: "1",
-          action: "USER_CREATED",
-          startDate: isoStart7DaysAgo,
-          endDate: isoNow,
-        });
-        const createdCurData = await callEdgeFunction(`get-audit-logs?${createdCurParams.toString()}`);
-        const curCount = createdCurData?.total || 0;
-        const growth = prevCount === 0 ? (curCount > 0 ? 100 : 0) : ((curCount - prevCount) / prevCount) * 100;
-        setGrowthPercent(Number.isFinite(growth) ? Math.round(growth * 10) / 10 : 0);
+          // Audit events (last 30 days)
+          const audits30Params = new URLSearchParams({
+            page: "1",
+            pageSize: "1",
+            startDate: isoStart30DaysAgo,
+            endDate: isoNow,
+          });
+          const audits30Data = await callEdgeFunction(`get-audit-logs?${audits30Params.toString()}`);
+          setAuditEvents30d(audits30Data?.total || 0);
 
-        // Recent activity (latest 5 logs)
-        const recentParams = new URLSearchParams({ page: "1", pageSize: "5" });
-        const recentData = await callEdgeFunction(`get-audit-logs?${recentParams.toString()}`);
-        setRecentActivity(recentData?.logs || []);
+          // Growth = new users last 7d vs previous 7d (from audit logs)
+          const createdPrevParams = new URLSearchParams({
+            page: "1",
+            pageSize: "1",
+            action: "USER_CREATED",
+            startDate: isoStart14DaysAgo,
+            endDate: isoStart7DaysAgo,
+          });
+          const createdPrevData = await callEdgeFunction(`get-audit-logs?${createdPrevParams.toString()}`);
+          const prevCount = createdPrevData?.total || 0;
 
-        // Quick stats
-        // Admin users (Admin + System Admin)
-        const adminParams = new URLSearchParams({ page: "1", limit: "1", role: "Admin" });
-        const sysAdminParams = new URLSearchParams({ page: "1", limit: "1", role: "System Admin" });
-        const [adminData, sysAdminData] = await Promise.all([
-          callEdgeFunction(`get-users?${adminParams.toString()}`),
-          callEdgeFunction(`get-users?${sysAdminParams.toString()}`),
-        ]);
-        setAdminUsersCount((adminData?.total || 0) + (sysAdminData?.total || 0));
+          const createdCurParams = new URLSearchParams({
+            page: "1",
+            pageSize: "1",
+            action: "USER_CREATED",
+            startDate: isoStart7DaysAgo,
+            endDate: isoNow,
+          });
+          const createdCurData = await callEdgeFunction(`get-audit-logs?${createdCurParams.toString()}`);
+          const curCount = createdCurData?.total || 0;
+          const growth = prevCount === 0 ? (curCount > 0 ? 100 : 0) : ((curCount - prevCount) / prevCount) * 100;
+          setGrowthPercent(Number.isFinite(growth) ? Math.round(growth * 10) / 10 : 0);
 
-        // Standard users (role: User)
-        const userRoleParams = new URLSearchParams({ page: "1", limit: "1", role: "User" });
-        const stdUsersData = await callEdgeFunction(`get-users?${userRoleParams.toString()}`);
-        setStandardUsersCount(stdUsersData?.total || 0);
+          // Recent activity (latest 5 logs)
+          const recentParams = new URLSearchParams({ page: "1", pageSize: "5" });
+          const recentData = await callEdgeFunction(`get-audit-logs?${recentParams.toString()}`);
+          setRecentActivity(recentData?.logs || []);
 
-        // Failed logins today
-        const failedParams = new URLSearchParams({
-          page: "1",
-          pageSize: "1",
-          action: "USER_LOGIN_FAILED",
-          startDate: isoStartOfToday,
-          endDate: isoNow,
-        });
-        const failedData = await callEdgeFunction(`get-audit-logs?${failedParams.toString()}`);
-        setFailedLoginsToday(failedData?.total || 0);
+          // Failed logins today
+          const failedParams = new URLSearchParams({
+            page: "1",
+            pageSize: "1",
+            action: "USER_LOGIN_FAILED",
+            startDate: isoStartOfToday,
+            endDate: isoNow,
+          });
+          const failedData = await callEdgeFunction(`get-audit-logs?${failedParams.toString()}`);
+          setFailedLoginsToday(failedData?.total || 0);
+        } else {
+          setActiveSessionsToday(0);
+          setAuditEvents30d(0);
+          setGrowthPercent(0);
+          setRecentActivity([]);
+          setFailedLoginsToday(0);
+        }
       } catch (err: any) {
         console.error("Failed to load dashboard data", err);
         setStatsError(err?.message || "Failed to load dashboard data");
@@ -183,7 +206,7 @@ function DashboardContent() {
       }
     };
     fetchAll();
-  }, []);
+  }, [permsLoading, canViewModule]);
 
   return (
     <div className="min-h-screen flex w-full bg-background text-foreground relative overflow-hidden">
