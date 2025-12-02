@@ -1,134 +1,146 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { format } from "date-fns";
 import { ArrowLeft, ArrowUp } from "lucide-react";
 
 export default function PrivacyPolicy() {
   const today = format(new Date(), "MMMM d, yyyy");
 
+  // Scroll to top on first load
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen bg-background text-foreground">
-        <main className="container mx-auto px-4 lg:px-8 py-10 max-w-4xl">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold">Privacy Policy</h1>
-            <Link to="/">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <ArrowLeft className="w-4 h-4" /> Back
-              </Button>
-            </Link>
-          </div>
-          <p className="text-muted-foreground mb-6">Last updated: {today}</p>
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center">
+      <main className="w-full max-w-4xl px-4 lg:px-8 py-10">
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>What Personal Data Is Collected</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                <p>
-                  We collect information you provide during registration and use of the platform, including
-                  name, email, and optional profile details such as phone and department. Technical data
-                  (such as device type, browser, IP address) may be collected to maintain security and
-                  improve performance.
-                </p>
-              </CardContent>
-            </Card>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold text-center w-full">Privacy Policy</h1>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>How Data Is Used</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground space-y-2">
-                <p>
-                  We use your data to enable authentication, secure access, and permission management.
-                  Aggregated analytics help us understand usage to improve reliability and features. We
-                  may personalize the interface (for example, theme preferences) to enhance your experience.
-                </p>
-              </CardContent>
-            </Card>
+          <Link to="/">
+            <Button variant="ghost" size="sm" className="gap-2 absolute right-6 top-10 md:static">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </Button>
+          </Link>
+        </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Cookies and Preferences</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                <p>
-                  Cookies support session management, analytics, and functional preferences. You can manage
-                  your choices using the Cookie Policy and the “Manage Cookie Preferences” link in the footer.
-                  Necessary cookies are required for secure login and core functionality.
-                </p>
-              </CardContent>
-            </Card>
+        <p className="text-muted-foreground mb-6 text-center">
+          Last updated: {today}
+        </p>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Data Sharing</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                <p>
-                  We do not sell personal data. Limited sharing may occur with trusted service providers to support
-                  infrastructure, security, and email delivery. These providers are bound by contractual obligations
-                  to protect your information and use it solely for the purposes we specify.
-                </p>
-              </CardContent>
-            </Card>
+        <div className="space-y-6">
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Data Storage and Retention</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                <p>
-                  Data is stored securely and retained only as long as necessary to provide the service, comply with
-                  legal obligations, and enforce policies. Audit logs may be retained to ensure system integrity and
-                  traceability of administrative actions.
-                </p>
-              </CardContent>
-            </Card>
+          {/* DATA COLLECTION */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">What Personal Data Is Collected</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground text-center">
+              <p>
+                We collect information you provide during registration and use of the platform,
+                including name, email, and optional profile fields. Technical information such as
+                browser type, device ID, and IP address may be collected for security and performance purposes.
+              </p>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>User Rights</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                <p>
-                  Depending on applicable law, you may have rights to access, download, correct, or request deletion
-                  of your data. If the platform supports these features, you can submit a request through your profile
-                  or contact support for assistance.
-                </p>
-              </CardContent>
-            </Card>
+          {/* HOW DATA IS USED */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">How Data Is Used</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground text-center space-y-2">
+              <p>
+                Data is used for authentication, secure access, permission handling, analytics, and
+                personalization. Usage analytics help improve platform reliability and user experience.
+              </p>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact Information</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                <p>
-                  For privacy-related questions or requests, contact us at privacy@example.com. We aim to respond in a
-                  timely manner and address your concerns in accordance with applicable regulations.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          {/* COOKIES */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Cookies and Preferences</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground text-center">
+              <p>
+                Cookies support login sessions, security, and feature preferences. Necessary cookies cannot
+                be disabled as they are required for secure authentication.
+              </p>
+            </CardContent>
+          </Card>
 
-          <Button
-            onClick={scrollToTop}
-            className="fixed bottom-6 right-6 rounded-full shadow-lg"
-            variant="secondary"
-          >
-            <ArrowUp className="w-4 h-4 mr-2" /> Top
-          </Button>
-        </main>
-      </div>
-    </SidebarProvider>
+          {/* DATA SHARING */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Data Sharing</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground text-center">
+              <p>
+                We do not sell personal data. Limited sharing occurs only with trusted service providers
+                for hosting, email delivery, and infrastructure security — all bound by confidentiality.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* STORAGE & RETENTION */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Data Storage and Retention</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground text-center">
+              <p>
+                Data is stored securely and maintained only for as long as necessary to provide services
+                and comply with legal obligations. Audit logs may be retained to maintain system integrity.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* USER RIGHTS */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">User Rights</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground text-center">
+              <p>
+                Depending on applicable regulations, you may request access to your data, download it,
+                correct inaccuracies, or request deletion. Support may assist with such requests.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* CONTACT */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Contact Information</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground text-center">
+              <p>
+                For privacy-related questions or requests, contact us at privacy@example.com.
+                We will aim to respond promptly in accordance with applicable laws.
+              </p>
+            </CardContent>
+          </Card>
+
+        </div>
+
+        {/* Scroll to Top Button */}
+        <Button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 rounded-full shadow-lg"
+          variant="secondary"
+        >
+          <ArrowUp className="w-4 h-4 mr-2" /> Top
+        </Button>
+      </main>
+    </div>
   );
 }
-

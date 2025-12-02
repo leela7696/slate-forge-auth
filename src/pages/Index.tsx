@@ -38,7 +38,7 @@ export default function Index() {
           />
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex gap-8 text-lg">
+          <nav className="hidden md:flex gap-8 text-lg pl-40">
             <Link to="/" className="hover:text-primary transition">Home</Link>
             <Link to="/pricing" className="hover:text-primary transition">Pricing</Link>
             <Link to="/features" className="hover:text-primary transition">Features</Link>
@@ -99,7 +99,7 @@ export default function Index() {
           <Link to="/auth">
             <Button
               size="lg"
-              className="text-lg px-10 py-6 rounded-xl bg-transparent text-white border border-white/40 hover:border-white hover:bg-white/10 backdrop-blur-sm transition-all"
+              className="text-base px-10 py-6 rounded-xl bg-transparent text-foreground border border-border hover:bg-accent backdrop-blur-sm transition-al"
             >
               Sign In
             </Button>
