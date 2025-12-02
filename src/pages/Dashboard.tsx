@@ -5,7 +5,6 @@ import { TopNav } from "@/components/TopNav";
 import { authStorage, callEdgeFunction } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Users, FileText, TrendingUp, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { ProfileCompletionModal } from "@/components/ProfileCompletionModal";
 import { ProfileCompletionReminder } from "@/components/ProfileCompletionReminder";
@@ -31,6 +30,7 @@ function DashboardContent() {
   const ToggleIcon = isExpanded ? PanelLeftClose : PanelLeftOpen;
   
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
   const profileCompletion = calculateProfileCompletion(user);
 
   // RBAC-aware visibility flags
@@ -65,11 +65,7 @@ function DashboardContent() {
     if (typeof window === "undefined") return;
     if (window.localStorage.getItem("justLoggedIn") !== "true") return;
 
-    toast({
-      title: `Welcome back, ${displayName}!`,
-      duration: 4000,
-      className: "shadow-xl border border-green-500/20 bg-black/40 text-white",
-    });
+    setShowWelcomeBanner(true);
 
     window.localStorage.removeItem("justLoggedIn");
     
@@ -223,6 +219,23 @@ function DashboardContent() {
 
         <main className="flex-1 p-8">
           <div className="max-w-7xl mx-auto space-y-10">
+
+            {showWelcomeBanner && (
+              <Card className="bg-black/40 border border-green-500/30 text-white shadow-xl">
+                <CardContent className="py-4 px-5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-7 w-7 rounded-full bg-green-600/30 text-green-300 flex items-center justify-center">👋</div>
+                    <div>
+                      <p className="font-medium">Welcome back, {displayName}</p>
+                      <p className="text-sm text-muted-foreground">You’re signed in. Let’s get productive.</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setShowWelcomeBanner(false)} className="text-white">
+                    Dismiss
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

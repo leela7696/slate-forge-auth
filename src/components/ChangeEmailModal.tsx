@@ -41,7 +41,7 @@ export const ChangeEmailModal = ({ open, onOpenChange, currentEmail, onSuccess }
       const rawMsg = error?.message || "Verification failed";
       const isInvalidOtp = /invalid otp/i.test(rawMsg) || /INVALID_OTP/i.test(error?.error || "");
       const isGenericNon2xx = /non-2xx/i.test(rawMsg) && (error?.context?.status === 400 || !error?.context?.status);
-      const friendly = (isInvalidOtp || isGenericNon2xx) ? "Orang-otap" : rawMsg;
+      const friendly = (isInvalidOtp || isGenericNon2xx) ? "Wrong-otp" : rawMsg;
       toast({ title: "Error", description: friendly, variant: "destructive" });
     } finally {
       setLoading(false);
@@ -63,7 +63,7 @@ export const ChangeEmailModal = ({ open, onOpenChange, currentEmail, onSuccess }
       const rawMsg = error?.message || "Failed to send OTP";
       const isInvalidOtp = /invalid otp/i.test(rawMsg) || /INVALID_OTP/i.test(error?.error || "");
       const isGenericNon2xx = /non-2xx/i.test(rawMsg) && (error?.context?.status === 400 || !error?.context?.status);
-      const friendly = (isInvalidOtp || isGenericNon2xx) ? "Orang-otap" : rawMsg;
+      const friendly = (isInvalidOtp || isGenericNon2xx) ? "Wrong-otp" : rawMsg;
       toast({ title: "Error", description: friendly, variant: "destructive" });
     } finally {
       setLoading(false);
@@ -106,7 +106,7 @@ export const ChangeEmailModal = ({ open, onOpenChange, currentEmail, onSuccess }
       const rawMsg = error?.message || "Failed to confirm new email";
       const isInvalidOtp = /invalid otp/i.test(rawMsg) || /INVALID_OTP/i.test(error?.error || "");
       const isGenericNon2xx = /non-2xx/i.test(rawMsg) && (error?.context?.status === 400 || !error?.context?.status);
-      const friendly = (isInvalidOtp || isGenericNon2xx) ? "Orang-otap" : rawMsg;
+      const friendly = (isInvalidOtp || isGenericNon2xx) ? "Wrong-otp" : rawMsg;
       // Map backend codes to friendly messages
       if (error?.error === 'SAME_EMAIL') {
         toast({ title: "Error", description: "New email must be different from your current email.", variant: "destructive" });

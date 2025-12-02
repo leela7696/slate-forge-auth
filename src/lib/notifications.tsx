@@ -159,10 +159,13 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
           }
 
           // In-app toast for visibility
-          toast(incoming.title, {
-            description: incoming.message,
-            duration: 3500,
-          });
+          const isWelcome = /welcome/i.test(incoming.title) || /welcome/i.test(incoming.message);
+          if (!isWelcome) {
+            toast(incoming.title, {
+              description: incoming.message,
+              duration: 3500,
+            });
+          }
         }
       );
     channel.subscribe();
