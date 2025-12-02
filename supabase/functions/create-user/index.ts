@@ -88,39 +88,62 @@ serve(async (req) => {
       );
     }
 
-    // Check if email already exists
+    // Check if email already exists (including soft-deleted users)
     const { data: existingUser } = await supabaseAdmin
       .from('users')
-      .select('id')
+      .select('id, is_deleted')
       .eq('email', email)
-      .eq('is_deleted', false)
-      .single();
-
-    if (existingUser) {
-      return new Response(
-        JSON.stringify({ error: 'Email already exists' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+      .maybeSingle();
 
     // Hash password
     const passwordHash = await hashPassword(password);
 
-    // Create user
-    const { data: newUser, error } = await supabaseAdmin
-      .from('users')
-      .insert({
-        name,
-        email,
-        password_hash: passwordHash,
-        role,
-        status: status || 'active',
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    let newUser;
 
-    if (error) throw error;
+    if (existingUser) {
+      if (!existingUser.is_deleted) {
+        // Active user exists - cannot create
+        return new Response(
+          JSON.stringify({ error: 'Email already exists' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Soft-deleted user exists - reactivate with new data
+      const { data: reactivatedUser, error: updateError } = await supabaseAdmin
+        .from('users')
+        .update({
+          name,
+          password_hash: passwordHash,
+          role,
+          status: status || 'active',
+          is_deleted: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingUser.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+      newUser = reactivatedUser;
+    } else {
+      // No existing user - create new
+      const { data: createdUser, error: insertError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          name,
+          email,
+          password_hash: passwordHash,
+          role,
+          status: status || 'active',
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      newUser = createdUser;
+    }
 
     // Log audit
     await supabaseAdmin.from('audit_logs').insert({
