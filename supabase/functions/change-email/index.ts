@@ -259,8 +259,40 @@ serve(async (req) => {
       await supabase.from('users').update({ email: request.new_email }).eq('id', userId);
       await supabase.from('email_change_requests').delete().eq('id', request.id);
 
+      // Fetch updated user data for new token
+      const { data: userData } = await supabase.from('users').select('id, name, email, role, phone, department, profile_picture_url, created_at').eq('id', userId).single();
+      
+      if (!userData) {
+        throw new Error('User not found after email update');
+      }
+      
+      // Generate new JWT token with updated email
+      const jwtSecret = Deno.env.get('JWT_SECRET') ?? '';
+      const key = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(jwtSecret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      
+      const header = { alg: 'HS256', typ: 'JWT' };
+      const now = Math.floor(Date.now() / 1000);
+      const tokenPayload = {
+        userId: userData.id,
+        email: userData.email,
+        role: userData.role,
+        exp: now + 7 * 24 * 60 * 60, // 7 days
+      };
+      
+      const base64url = (data: string) => btoa(data).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+      const encodedHeader = base64url(JSON.stringify(header));
+      const encodedPayload = base64url(JSON.stringify(tokenPayload));
+      const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`));
+      const encodedSignature = base64url(String.fromCharCode(...new Uint8Array(signature)));
+      const newToken = `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
+
       // Send email change confirmation
-      const { data: userData } = await supabase.from('users').select('name, email').eq('id', userId).single();
       if (userData?.email) {
         await supabase.functions.invoke('send-email', {
           body: {
@@ -276,7 +308,22 @@ serve(async (req) => {
           },
         });
       }
-      return new Response(JSON.stringify({ success: true, message: 'Email updated successfully' }), 
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Email updated successfully',
+        token: newToken,
+        user: {
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+          phone: userData.phone,
+          department: userData.department,
+          profile_picture_url: userData.profile_picture_url,
+          created_at: userData.created_at,
+        }
+      }), 
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 

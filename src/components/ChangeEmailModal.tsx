@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "@/hooks/use-toast";
-import { callEdgeFunction } from "@/lib/auth";
+import { callEdgeFunction, authStorage } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
 
 interface ChangeEmailModalProps {
@@ -131,6 +131,15 @@ export const ChangeEmailModal = ({ open, onOpenChange, currentEmail, onSuccess }
     setLoading(true);
     try {
       const result = await callEdgeFunction('change-email', { action: 'confirm', otp: newOtp });
+      
+      // Update stored token and user with new email
+      if (result?.token) {
+        authStorage.setToken(result.token);
+      }
+      if (result?.user) {
+        authStorage.setUser(result.user);
+      }
+      
       toast({ title: "Success", description: "Email updated successfully" });
       onSuccess();
       onOpenChange(false);
