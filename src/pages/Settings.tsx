@@ -28,6 +28,7 @@ function SettingsContent() {
   const { theme, setTheme, resolvedTheme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { soundEnabled, setSoundEnabled } = useNotifications();
+  const [testingSound, setTestingSound] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const user = authStorage.getUser();
@@ -103,6 +104,20 @@ function SettingsContent() {
                     <p className="text-muted-foreground text-sm">Play a sound for new notifications (default: ON)</p>
                   </div>
                   <Switch checked={soundEnabled} onCheckedChange={setSoundEnabled as any} />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    disabled={testingSound}
+                    onClick={() => {
+                      setTestingSound(true);
+                      const audio = new Audio("/success-sound.mp3");
+                      audio.volume = 0.7;
+                      audio.play().catch(() => {}).finally(() => setTestingSound(false));
+                    }}
+                  >
+                    {testingSound ? "Playing…" : "Test Notification Sound"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

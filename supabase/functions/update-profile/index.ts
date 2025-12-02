@@ -52,19 +52,40 @@ serve(async (req) => {
 
     const { name, phone, department, profile_picture_url } = await req.json();
 
-    // Validate input
-    if (name !== undefined && (!name || name.trim().length === 0)) {
-      return new Response(
-        JSON.stringify({ error: 'Name is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Server-side validation mirroring client rules
+    const NAME_REGEX = /^[A-Za-z\s]+$/;
+    const DESIGNATION_REGEX = /^[A-Za-z\s]+$/;
+    const MOBILE_REGEX = /^[6-9]\d{9}$/; // India: starts 6-9 with 10 digits total
+
+    const trimmedName = typeof name === 'string' ? name.trim() : name;
+    const trimmedPhone = typeof phone === 'string' ? phone.trim() : phone;
+    const trimmedDepartment = typeof department === 'string' ? department.trim() : department;
+
+    if (trimmedName !== undefined) {
+      if (!trimmedName || trimmedName.length < 3 || !NAME_REGEX.test(trimmedName)) {
+        return new Response(
+          JSON.stringify({ error: 'Please enter a valid name — only letters and spaces are allowed.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    if (phone && phone.length > 15) {
-      return new Response(
-        JSON.stringify({ error: 'Phone number is too long' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (trimmedDepartment !== undefined) {
+      if (!trimmedDepartment || trimmedDepartment.length < 2 || !DESIGNATION_REGEX.test(trimmedDepartment)) {
+        return new Response(
+          JSON.stringify({ error: 'Please enter a valid designation.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (trimmedPhone !== undefined) {
+      if (!MOBILE_REGEX.test(trimmedPhone)) {
+        return new Response(
+          JSON.stringify({ error: 'Please enter a valid 10-digit mobile number.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Fetch current values for before/after logging
@@ -79,9 +100,9 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
-    if (name !== undefined) updateData.name = name.trim();
-    if (phone !== undefined) updateData.phone = phone?.trim() || null;
-    if (department !== undefined) updateData.department = department?.trim() || null;
+    if (name !== undefined) updateData.name = trimmedName;
+    if (phone !== undefined) updateData.phone = trimmedPhone || null;
+    if (department !== undefined) updateData.department = trimmedDepartment || null;
     if (profile_picture_url !== undefined) updateData.profile_picture_url = profile_picture_url || null;
 
     // Update user profile

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { authStorage } from "@/lib/auth";
+import { toast } from "sonner";
 
 export type AppNotification = {
   id: string;
@@ -43,11 +44,25 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastPlayedRef = useRef<number>(0);
   const debounceMs = 2000;
+  const primedRef = useRef<boolean>(false);
 
   useEffect(() => {
-    // Prepare audio element lazily
+    // Prepare audio element lazily and allow priming via first user interaction
     audioRef.current = new Audio("/success-sound.mp3");
     audioRef.current.volume = 0.7;
+
+    const primeAudio = () => {
+      if (!audioRef.current || primedRef.current) return;
+      audioRef.current.muted = true;
+      audioRef.current.play().catch(() => {});
+      audioRef.current.pause();
+      audioRef.current.muted = false;
+      primedRef.current = true;
+    };
+    window.addEventListener("click", primeAudio, { once: true });
+    return () => {
+      window.removeEventListener("click", primeAudio);
+    };
   }, []);
 
   useEffect(() => {
@@ -85,8 +100,11 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       }
     };
     load();
+    // Polling fallback in case realtime misses events
+    const interval = setInterval(load, 30000);
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, [userId]);
 
@@ -139,6 +157,12 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
             audioRef.current.play().catch(() => {});
             lastPlayedRef.current = now;
           }
+
+          // In-app toast for visibility
+          toast(incoming.title, {
+            description: incoming.message,
+            duration: 3500,
+          });
         }
       );
     channel.subscribe();

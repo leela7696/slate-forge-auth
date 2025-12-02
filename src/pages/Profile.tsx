@@ -19,10 +19,26 @@ import { calculateProfileCompletion } from "@/lib/profile-completion";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
+// Validation regexes
+const NAME_REGEX = /^[A-Za-z\s]+$/;
+const DESIGNATION_REGEX = /^[A-Za-z\s]+$/;
+const MOBILE_REGEX = /^[6-9]\d{9}$/; // India format: starts with 6-9, total 10 digits
+
 const profileSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string().max(15, "Phone number is too long").optional(),
-  department: z.string().optional(),
+  name: z
+    .string()
+    .trim()
+    .min(3, "Please enter a valid name — only letters and spaces are allowed.")
+    .regex(NAME_REGEX, "Please enter a valid name — only letters and spaces are allowed."),
+  phone: z
+    .string()
+    .trim()
+    .regex(MOBILE_REGEX, "Please enter a valid 10-digit mobile number."),
+  department: z
+    .string()
+    .trim()
+    .min(2, "Please enter a valid designation.")
+    .regex(DESIGNATION_REGEX, "Please enter a valid designation."),
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
@@ -45,10 +61,11 @@ function ProfileContent() {
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
+    mode: "onChange",
     defaultValues: {
-      name: user?.name || "",
-      phone: "",
-      department: "",
+      name: (user?.name || "").trim(),
+      phone: ((user as any)?.phone || "").toString().trim(),
+      department: ((user as any)?.department || "").trim(),
     },
   });
 
@@ -86,9 +103,9 @@ function ProfileContent() {
     setIsLoading(true);
     try {
       const result = await callEdgeFunction('update-profile', {
-        name: data.name,
-        phone: data.phone,
-        department: data.department,
+        name: data.name.trim(),
+        phone: data.phone.trim(),
+        department: data.department.trim(),
       });
 
       const updatedUser = { ...user, ...result.user };
@@ -99,6 +116,13 @@ function ProfileContent() {
       toast.error(error.message || "Failed to update profile");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const onInvalid = (errors: any) => {
+    const firstErrorField = Object.keys(errors)[0] as keyof ProfileForm | undefined;
+    if (firstErrorField) {
+      form.setFocus(firstErrorField);
     }
   };
 
@@ -151,11 +175,21 @@ function ProfileContent() {
                 </CardHeader>
                 <CardContent>
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
                       <FormField control={form.control} name="name" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Full Name</FormLabel>
-                          <FormControl><Input {...field} /></FormControl>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              onChange={(e) => {
+                                const onlyLettersSpaces = e.target.value.replace(/[^A-Za-z\s]/g, "");
+                                field.onChange(onlyLettersSpaces);
+                              }}
+                              onBlur={(e) => field.onChange(e.target.value.trim())}
+                              autoComplete="name"
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )} />
@@ -163,19 +197,52 @@ function ProfileContent() {
                         <FormField control={form.control} name="phone" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Mobile Number</FormLabel>
-                            <FormControl><Input {...field} placeholder="Optional" /></FormControl>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="10-digit mobile number"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                onKeyDown={(e) => {
+                                  const allowed = [
+                                    "Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End"
+                                  ];
+                                  if (allowed.includes(e.key)) return;
+                                  if (!/^[0-9]$/.test(e.key)) {
+                                    e.preventDefault();
+                                  }
+                                }}
+                                onChange={(e) => {
+                                  const digitsOnly = e.target.value.replace(/\D/g, "");
+                                  field.onChange(digitsOnly);
+                                }}
+                                onBlur={(e) => field.onChange(e.target.value.trim())}
+                                maxLength={10}
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                         <FormField control={form.control} name="department" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Designation</FormLabel>
-                            <FormControl><Input {...field} placeholder="Optional" /></FormControl>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                onChange={(e) => {
+                                  const onlyLettersSpaces = e.target.value.replace(/[^A-Za-z\s]/g, "");
+                                  field.onChange(onlyLettersSpaces);
+                                }}
+                                onBlur={(e) => field.onChange(e.target.value.trim())}
+                                autoComplete="organization-title"
+                                placeholder="e.g., Software Engineer"
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                       </div>
-                       <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+                       <Button type="submit" disabled={isLoading || !form.formState.isValid} className="w-full sm:w-auto">
                          {isLoading ? "Saving..." : "Save Changes"}
                        </Button>
                     </form>
