@@ -49,7 +49,12 @@ serve(async (req) => {
   }
 
   try {
-    const { name, email, password }: SendOtpRequest = await req.json();
+    const { name: rawName, email: rawEmail, password: rawPassword }: SendOtpRequest = await req.json();
+
+    // Trim inputs
+    const name = (rawName || '').trim();
+    const email = (rawEmail || '').trim();
+    const password = rawPassword || '';
 
     // Validate inputs
     if (!name || !email || !password) {
@@ -59,9 +64,20 @@ serve(async (req) => {
       );
     }
 
-    if (password.length < 6) {
+    // Email regex validation
+    const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    if (!EMAIL_REGEX.test(email)) {
       return new Response(
-        JSON.stringify({ error: 'Password must be at least 6 characters' }),
+        JSON.stringify({ error: 'Invalid email format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Strong password validation
+    const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
+    if (!STRONG_PASSWORD_REGEX.test(password)) {
+      return new Response(
+        JSON.stringify({ error: 'Weak password' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

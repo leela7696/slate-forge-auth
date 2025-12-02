@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,24 +16,39 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { callEdgeFunction, authStorage } from "@/lib/auth";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Progress } from "@/components/ui/progress";
+import { Check, X } from "lucide-react";
+
+// Validation regex constants
+const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
 
 const emailSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z
+    .string()
+    .trim()
+    .regex(EMAIL_REGEX, "Please enter a valid email address"),
 });
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().trim().regex(EMAIL_REGEX, "Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
 });
 
 const signupSchema = z
   .object({
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    email: z.string().trim().regex(EMAIL_REGEX, "Please enter a valid email address"),
+    password: z
+      .string()
+      .regex(
+        STRONG_PASSWORD_REGEX,
+        "Password must be at least 8 characters and include upper/lowercase, number and special character."
+      ),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Passwords do not match.",
     path: ["confirmPassword"],
   });
 
@@ -50,18 +65,34 @@ export default function Auth() {
 
   const emailForm = useForm<EmailForm>({
     resolver: zodResolver(emailSchema),
+    mode: "onChange",
     defaultValues: { email: "" },
   });
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
+    mode: "onChange",
     defaultValues: { email: "", password: "" },
   });
 
   const signupForm = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
+    mode: "onChange",
     defaultValues: { email: "", password: "", confirmPassword: "" },
   });
+
+  // Password strength and checklist derived values
+  const passwordValue = signupForm.watch("password") || "";
+  const checks = {
+    upper: /[A-Z]/.test(passwordValue),
+    lower: /[a-z]/.test(passwordValue),
+    number: /\d/.test(passwordValue),
+    special: /[!@#$%^&*]/.test(passwordValue),
+    length: passwordValue.length >= 8,
+  };
+  const passedCount = Object.values(checks).filter(Boolean).length;
+  const strengthValue = Math.round((passedCount / 5) * 100);
+  const strengthLabel = passedCount <= 2 ? "Weak" : passedCount === 3 || passedCount === 4 ? "Medium" : "Strong";
 
   const handleEmailSubmit = async (values: EmailForm) => {
     setIsLoading(true);
@@ -187,7 +218,7 @@ export default function Auth() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <Button className="w-full bg-green-600 hover:bg-green-500" disabled={isLoading}>
+                <Button className="w-full bg-green-600 hover:bg-green-500" disabled={isLoading || !emailForm.formState.isValid}>
                   {isLoading ? "Checking..." : "Continue"}
                 </Button>
               </form>
@@ -248,15 +279,62 @@ export default function Auth() {
                   </FormItem>
                 )} />
 
-                <FormField control={signupForm.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" className="bg-black/20 border-white/30" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={signupForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="••••••••"
+                              className="bg-black/20 border-white/30"
+                              {...field}
+                            />
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-80">
+                          <div className="space-y-3 text-sm">
+                            <div className="font-medium">Password requirements</div>
+                            <ul className="space-y-2">
+                              <li className="flex items-center gap-2">
+                                {checks.upper ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+                                <span>Uppercase</span>
+                              </li>
+                              <li className="flex items-center gap-2">
+                                {checks.lower ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+                                <span>Lowercase</span>
+                              </li>
+                              <li className="flex items-center gap-2">
+                                {checks.number ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+                                <span>Number</span>
+                              </li>
+                              <li className="flex items-center gap-2">
+                                {checks.special ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+                                <span>Special character</span>
+                              </li>
+                              <li className="flex items-center gap-2">
+                                {checks.length ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+                                <span>8+ Characters</span>
+                              </li>
+                            </ul>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-xs">
+                                <span>Strength</span>
+                                <span className={passedCount === 5 ? "text-green-500" : passedCount >= 3 ? "text-yellow-400" : "text-red-500"}>{strengthLabel}</span>
+                              </div>
+                              <Progress value={strengthValue} />
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField control={signupForm.control} name="confirmPassword" render={({ field }) => (
                   <FormItem>
@@ -268,7 +346,7 @@ export default function Auth() {
                   </FormItem>
                 )} />
 
-                <Button className="w-full bg-transparent text-white border border-white/40 hover:border-white hover:bg-white/10 backdrop-blur transition-all" disabled={isLoading}>
+                <Button className="w-full bg-transparent text-white border border-white/40 hover:border-white hover:bg-white/10 backdrop-blur transition-all" disabled={isLoading || !signupForm.formState.isValid}>
                   {isLoading ? "Creating..." : "Create Account"}
                 </Button>
 

@@ -39,7 +39,9 @@ serve(async (req) => {
   }
 
   try {
-    const { email, otp }: VerifyOtpRequest = await req.json();
+    const { email: rawEmail, otp }: VerifyOtpRequest = await req.json();
+
+    const email = (rawEmail || '').trim();
 
     if (!email || !otp) {
       return new Response(
