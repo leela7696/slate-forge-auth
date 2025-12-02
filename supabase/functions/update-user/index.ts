@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verify } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
 import { auditLogger } from "../_shared/auditLogger.ts";
+import { createUserNotification } from "../_shared/notificationHelper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -156,6 +157,11 @@ serve(async (req) => {
       ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
       userAgent: req.headers.get('user-agent') || 'unknown',
     });
+
+    // Send in-app notification to the affected user (only if admin is editing another user)
+    if (userId !== payload.userId && Object.keys(afterValues).length > 0) {
+      await createUserNotification(supabaseAdmin, userId, 'PROFILE_UPDATED', {});
+    }
 
     return new Response(
       JSON.stringify({ success: true, user: updatedUser }),

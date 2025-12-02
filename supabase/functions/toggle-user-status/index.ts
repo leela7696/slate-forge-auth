@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verify } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
 import { auditLogger } from "../_shared/auditLogger.ts";
+import { createUserNotification } from "../_shared/notificationHelper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -127,6 +128,12 @@ serve(async (req) => {
       success: true,
       ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
       userAgent: req.headers.get('user-agent') || 'unknown',
+    });
+
+    // Send in-app notification to the affected user
+    await createUserNotification(supabaseAdmin, userId, 'STATUS_CHANGED', {
+      oldStatus: targetUser.status,
+      newStatus: status
     });
 
     return new Response(
