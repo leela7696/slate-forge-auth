@@ -14,11 +14,9 @@ import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { TopNav } from "@/components/TopNav";
 import { ProfileCard } from "@/components/ProfileCard";
 import { ProfilePictureUpload } from "@/components/ProfilePictureUpload";
-import { ChangeEmailModal } from "@/components/ChangeEmailModal";
-import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 import { ProfileCompletionBar } from "@/components/ProfileCompletionBar";
 import { calculateProfileCompletion } from "@/lib/profile-completion";
-import { Mail, Lock, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const profileSchema = z.object({
@@ -39,8 +37,6 @@ export default function Profile() {
 
 function ProfileContent() {
   const [isLoading, setIsLoading] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [user, setUser] = useState(authStorage.getUser());
   const { state, toggleSidebar } = useSidebar();
   const isExpanded = state === "expanded";
@@ -187,27 +183,13 @@ function ProfileContent() {
                 </CardContent>
               </Card>
 
-              <Card className="shadow-md">
-                <CardHeader className="bg-muted/30">
-                  <CardTitle>Security Settings</CardTitle>
-                  <CardDescription>Manage your account security</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start" onClick={() => setShowEmailModal(true)}>
-                    <Mail className="mr-2 h-4 w-4" />Change Email Address
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start" onClick={() => setShowPasswordModal(true)}>
-                    <Lock className="mr-2 h-4 w-4" />Change Password
-                  </Button>
-                </CardContent>
-              </Card>
+              
             </div>
           </div>
         </main>
       </div>
 
-      <ChangeEmailModal open={showEmailModal} onOpenChange={setShowEmailModal} currentEmail={user?.email || ""} onSuccess={fetchUserData} />
-      <ChangePasswordModal open={showPasswordModal} onOpenChange={setShowPasswordModal} onSuccess={() => toast.success("Password changed successfully")} />
+      
     </div>
   );
 }

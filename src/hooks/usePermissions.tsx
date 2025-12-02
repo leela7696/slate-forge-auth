@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { callEdgeFunction } from "@/lib/auth";
 import { authStorage } from "@/lib/auth";
 
@@ -89,10 +89,10 @@ export function usePermissions() {
     fetchPermissions();
   }, [user?.role]);
 
-  const hasPermission = (module: string, action: 'view' | 'create' | 'edit' | 'delete'): boolean => {
+  const hasPermission = useCallback((module: string, action: 'view' | 'create' | 'edit' | 'delete'): boolean => {
     const perm = permissions.find(p => p.module === module);
     if (!perm) return false;
-    
+
     switch (action) {
       case 'view': return perm.can_view;
       case 'create': return perm.can_create;
@@ -100,11 +100,11 @@ export function usePermissions() {
       case 'delete': return perm.can_delete;
       default: return false;
     }
-  };
+  }, [permissions]);
 
-  const canViewModule = (module: string): boolean => {
+  const canViewModule = useCallback((module: string): boolean => {
     return hasPermission(module, 'view');
-  };
+  }, [hasPermission]);
 
   return {
     permissions,

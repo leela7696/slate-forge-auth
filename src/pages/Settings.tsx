@@ -10,6 +10,11 @@ import { Sun, Moon, Monitor } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { useNotifications } from "@/lib/notifications";
+import { Button } from "@/components/ui/button";
+import { Mail, Lock } from "lucide-react";
+import { ChangeEmailModal } from "@/components/ChangeEmailModal";
+import { ChangePasswordModal } from "@/components/ChangePasswordModal";
+import { authStorage } from "@/lib/auth";
 
 export default function Settings() {
   return (
@@ -23,6 +28,9 @@ function SettingsContent() {
   const { theme, setTheme, resolvedTheme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { soundEnabled, setSoundEnabled } = useNotifications();
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const user = authStorage.getUser();
 
   useEffect(() => setMounted(true), []);
 
@@ -38,7 +46,7 @@ function SettingsContent() {
           <div className="max-w-5xl mx-auto space-y-8">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-              <p className="text-muted-foreground mt-2">Configure your preferences and appearance</p>
+              <p className="text-muted-foreground mt-2">Configure your account, preferences, and appearance</p>
             </div>
 
             {/* Appearance / Theme */}
@@ -98,9 +106,26 @@ function SettingsContent() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Account Settings */}
+            <Card className="bg-card border border-border shadow-lg">
+              <CardHeader>
+                <CardTitle>Account Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button variant="outline" className="w-full justify-start" onClick={() => setShowEmailModal(true)}>
+                  <Mail className="mr-2 h-4 w-4" />Change Email Address
+                </Button>
+                <Button variant="outline" className="w-full justify-start" onClick={() => setShowPasswordModal(true)}>
+                  <Lock className="mr-2 h-4 w-4" />Change Password
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </main>
       </div>
+      <ChangeEmailModal open={showEmailModal} onOpenChange={setShowEmailModal} currentEmail={user?.email || ""} onSuccess={() => { /* no-op: user email updates handled by auth storage */ }} />
+      <ChangePasswordModal open={showPasswordModal} onOpenChange={setShowPasswordModal} onSuccess={() => { /* optional toast handled in modal */ }} />
     </div>
   );
 }

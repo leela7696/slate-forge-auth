@@ -116,6 +116,7 @@ export function ProfileMenu() {
         </DropdownMenuItem>
 
         <DropdownMenuItem
+          onClick={() => navigate("/settings")}
           className="
             cursor-pointer py-3 rounded-md
             hover:bg-accent hover:text-accent-foreground

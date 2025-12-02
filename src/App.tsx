@@ -17,7 +17,6 @@ import AuditLogs from "./pages/admin/AuditLogs";
 import RBAC from "./pages/admin/RBAC";
 import Settings from "./pages/Settings";
 import NotificationsPage from "./pages/Notifications";
-import NotificationsBroadcast from "./pages/admin/NotificationsBroadcast";
 import MyActivity from "./pages/MyActivity";
 import NotFound from "./pages/NotFound";
 import CookiePolicy from "./pages/CookiePolicy";
@@ -79,12 +78,7 @@ const App = () => (
               <Route element={<PermissionProtectedRoute module="RBAC" />}> 
                 <Route path="/admin/rbac" element={<RBAC />} />
               </Route>
-              {/* Admin Broadcast - restrict by role first, then module */}
-              <Route element={<ProtectedRoute requiredRoles={["Admin", "System Admin"]} />}> 
-                <Route element={<PermissionProtectedRoute module="Notifications Broadcast" requiredAction="create" />}> 
-                  <Route path="/admin/notifications-broadcast" element={<NotificationsBroadcast />} />
-                </Route>
-              </Route>
+              {/* Broadcast feature removed */}
             </Route>
 
             {/* Catch-all route -> /404 */}

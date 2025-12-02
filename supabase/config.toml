@@ -66,8 +66,6 @@ verify_jwt = false
 [functions.get-audit-logs]
 verify_jwt = false
 
-[functions.broadcast-notifications]
-verify_jwt = false
 
 [functions.get-my-activity]
 verify_jwt = false
