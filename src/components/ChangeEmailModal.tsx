@@ -71,15 +71,35 @@ export const ChangeEmailModal = ({ open, onOpenChange, currentEmail, onSuccess }
   };
 
   const sendNewOtp = async () => {
-    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+    if (!newEmail || !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(newEmail)) {
       toast({ title: "Error", description: "Please enter a valid email", variant: "destructive" });
       return;
     }
 
+    // Frontend instant validation: block same email
+    if (newEmail.trim().toLowerCase() === currentEmail.trim().toLowerCase()) {
+      toast({ title: "Error", description: "You are already using this email. Please enter a different email.", variant: "destructive" });
+      return;
+    }
+
+    // Frontend check: active user existence to give friendly message early
+    try {
+      const check = await callEdgeFunction('check-email', { email: newEmail.trim().toLowerCase() });
+      if (check?.exists) {
+        toast({ title: "Error", description: "This email is already registered by an active user.", variant: "destructive" });
+        return;
+      }
+    } catch (e) {
+      // Non-blocking: proceed to backend which also validates
+    }
+
     setLoading(true);
     try {
-      await callEdgeFunction('change-email', { action: 'send-new-otp', newEmail });
+      const resp = await callEdgeFunction('change-email', { action: 'send-new-otp', newEmail });
       toast({ title: "Success", description: `OTP sent to ${newEmail}` });
+      if (resp?.note === 'DELETED_USER_AVAILABLE') {
+        toast({ title: "Info", description: "This email belongs to a deleted user and is now available." });
+      }
       setCountdown(60);
       setStep(3);
     } catch (error: any) {
@@ -87,7 +107,16 @@ export const ChangeEmailModal = ({ open, onOpenChange, currentEmail, onSuccess }
       const isInvalidOtp = /invalid otp/i.test(rawMsg) || /INVALID_OTP/i.test(error?.error || "");
       const isGenericNon2xx = /non-2xx/i.test(rawMsg) && (error?.context?.status === 400 || !error?.context?.status);
       const friendly = (isInvalidOtp || isGenericNon2xx) ? "Orang-otap" : rawMsg;
-      toast({ title: "Error", description: friendly, variant: "destructive" });
+      // Map backend codes to friendly messages
+      if (error?.error === 'SAME_EMAIL') {
+        toast({ title: "Error", description: "New email must be different from your current email.", variant: "destructive" });
+      } else if (error?.error === 'ACTIVE_EMAIL_TAKEN') {
+        toast({ title: "Error", description: "This email is already registered by an active user.", variant: "destructive" });
+      } else if (error?.error === 'INVALID_EMAIL') {
+        toast({ title: "Error", description: "Please enter a valid email", variant: "destructive" });
+      } else {
+        toast({ title: "Error", description: friendly, variant: "destructive" });
+      }
     } finally {
       setLoading(false);
     }

@@ -161,31 +161,83 @@ serve(async (req) => {
     if (action === 'send-new-otp') {
       if (!newEmail) throw new Error('New email required');
 
-      const { data: existingUser } = await supabase.from('users').select('id').eq('email', newEmail.toLowerCase()).neq('id', userId).maybeSingle();
-      if (existingUser) {
-        return new Response(JSON.stringify({ error: 'Email already in use' }), 
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      // Validate email pattern server-side
+      const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+      if (!EMAIL_REGEX.test(String(newEmail).toLowerCase())) {
+        return new Response(
+          JSON.stringify({ error: 'INVALID_EMAIL' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
-      const { data: request } = await supabase.from('email_change_requests').select('*').eq('user_id', userId).single();
+      // Ensure old email has been verified and available for comparison
+      const { data: request } = await supabase
+        .from('email_change_requests')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
       if (!request || request.status !== 'verifying_new') {
-        return new Response(JSON.stringify({ error: 'Please verify current email first' }), 
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(
+          JSON.stringify({ error: 'VERIFY_OLD_FIRST' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
+
+      // Block if new email equals current (old) email
+      if (request.old_email && request.old_email.toLowerCase() === newEmail.toLowerCase()) {
+        return new Response(
+          JSON.stringify({ error: 'SAME_EMAIL', message: 'You are already using this email. Please enter a different email.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check if email belongs to an ACTIVE user (ignore deleted)
+      const { data: activeUser } = await supabase
+        .from('users')
+        .select('id, status, is_deleted')
+        .eq('email', newEmail.toLowerCase())
+        .eq('is_deleted', false)
+        .eq('status', 'active')
+        .neq('id', userId)
+        .maybeSingle();
+
+      if (activeUser) {
+        return new Response(
+          JSON.stringify({ error: 'ACTIVE_EMAIL_TAKEN', message: 'This email is already registered by an active user.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check if this email belonged to a deleted user (optional info)
+      const { data: deletedUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', newEmail.toLowerCase())
+        .eq('is_deleted', true)
+        .maybeSingle();
 
       const newOtpCode = generateOTP();
-      await supabase.from('email_change_requests').update({ 
-        new_email: newEmail.toLowerCase(),
-        new_email_otp_hash: await hashOtp(newOtpCode),
-        status: 'verifying_new',
-        attempts_left: MAX_ATTEMPTS,
-        expires_at: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60000).toISOString(),
-        resend_after: new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000).toISOString(),
-      }).eq('id', request.id);
-      
+      await supabase
+        .from('email_change_requests')
+        .update({
+          new_email: newEmail.toLowerCase(),
+          new_email_otp_hash: await hashOtp(newOtpCode),
+          status: 'verifying_new',
+          attempts_left: MAX_ATTEMPTS,
+          expires_at: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60000).toISOString(),
+          resend_after: new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000).toISOString(),
+        })
+        .eq('id', request.id);
+
       await sendOTPEmail(supabase, newEmail, newOtpCode, false);
-      return new Response(JSON.stringify({ success: true, message: 'OTP sent to new email' }), 
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'OTP sent to new email',
+          note: deletedUser ? 'DELETED_USER_AVAILABLE' : undefined
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (action === 'confirm') {

@@ -94,11 +94,12 @@ serve(async (req) => {
       );
     }
 
-    // Soft delete user
+    // Soft delete user: mark deleted and set status inactive
     const { error } = await supabaseAdmin
       .from('users')
       .update({ 
         is_deleted: true,
+        status: 'inactive',
         updated_at: new Date().toISOString()
       })
       .eq('id', userId);
