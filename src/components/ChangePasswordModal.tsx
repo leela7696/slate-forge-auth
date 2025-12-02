@@ -7,6 +7,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { toast } from "@/hooks/use-toast";
 import { callEdgeFunction } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
+import { isStrongPassword, STRONG_PASSWORD_MESSAGE } from "@/lib/password";
 
 interface ChangePasswordModalProps {
   open: boolean;
@@ -49,8 +50,8 @@ export const ChangePasswordModal = ({ open, onOpenChange, onSuccess }: ChangePas
       return;
     }
 
-    if (!newPassword || newPassword.length < 6) {
-      toast({ title: "Error", description: "Password must be at least 6 characters", variant: "destructive" });
+    if (!newPassword || !isStrongPassword(newPassword)) {
+      toast({ title: "Error", description: STRONG_PASSWORD_MESSAGE, variant: "destructive" });
       return;
     }
 
@@ -171,7 +172,7 @@ export const ChangePasswordModal = ({ open, onOpenChange, onSuccess }: ChangePas
                   onChange={(e) => setNewPassword(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Minimum 6 characters
+                  {STRONG_PASSWORD_MESSAGE}
                 </p>
               </div>
               <div className="space-y-2">

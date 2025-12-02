@@ -8,6 +8,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { toast } from "@/hooks/use-toast";
 import { callEdgeFunction } from "@/lib/auth";
 import { Loader2, ArrowLeft } from "lucide-react";
+import { isStrongPassword, STRONG_PASSWORD_MESSAGE } from "@/lib/password";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -48,8 +49,8 @@ export default function ForgotPassword() {
 
   const resetPassword = async () => {
     if (otp.length !== 6) return toast({ title: "Error", description: "Please enter 6-digit OTP", variant: "destructive" });
-    if (!newPassword || newPassword.length < 6)
-      return toast({ title: "Error", description: "Password must be at least 6 characters", variant: "destructive" });
+    if (!newPassword || !isStrongPassword(newPassword))
+      return toast({ title: "Error", description: STRONG_PASSWORD_MESSAGE, variant: "destructive" });
     if (newPassword !== confirmPassword)
       return toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
 
@@ -166,7 +167,7 @@ export default function ForgotPassword() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                 />
-                <p className="text-xs text-white/80">Minimum 6 characters</p>
+                <p className="text-xs text-white/80">{STRONG_PASSWORD_MESSAGE}</p>
               </div>
 
               <div className="space-y-2">

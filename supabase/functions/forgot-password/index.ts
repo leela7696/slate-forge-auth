@@ -10,6 +10,9 @@ const OTP_EXPIRY_MINUTES = 10;
 const RESEND_COOLDOWN_SECONDS = 60;
 const MAX_ATTEMPTS = 5;
 
+// Strong password policy: upper, lower, number, special, min length 8
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
+
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -98,9 +101,11 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      if (newPassword.length < 6) {
-        return new Response(JSON.stringify({ error: 'Password must be 6+ characters' }), 
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      if (!STRONG_PASSWORD_REGEX.test(newPassword)) {
+        return new Response(
+          JSON.stringify({ error: 'Weak password: min 8 chars with upper, lower, number, and special' }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       const { data: request } = await supabase.from('password_change_requests').select('*').eq('email', email.toLowerCase()).single();
