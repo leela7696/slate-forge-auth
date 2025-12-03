@@ -73,7 +73,7 @@ export default function VerifyOtp() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#071d12] px-4 relative text-white overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
 
       {/* Background Glow */}
       <div className="absolute inset-0 pointer-events-none">
@@ -81,15 +81,15 @@ export default function VerifyOtp() {
         <div className="absolute w-[750px] h-[750px] bg-green-700/20 blur-[200px] animate-pulse-slow bottom-0 -right-32 rounded-full"></div>
       </div>
 
-      <Card className="w-full max-w-md bg-white/10 border border-white/20 backdrop-blur-xl shadow-2xl">
+      <Card className="w-full max-w-md bg-card border border-border backdrop-blur-xl shadow-2xl">
         <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-3xl font-bold text-white">Verify your email</CardTitle>
-          <CardDescription className="text-white/80">
-            We sent a 6-digit code to <span className="font-semibold text-white">{email}</span>
+          <CardTitle className="text-3xl font-bold">Verify your email</CardTitle>
+          <CardDescription>
+            We sent a 6-digit code to <span className="font-semibold">{email}</span>
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-6 text-white">
+        <CardContent className="space-y-6">
 
           {/* OTP Input */}
           <div className="flex justify-center gap-2">
@@ -103,7 +103,7 @@ export default function VerifyOtp() {
                 value={digit}
                 onChange={(e) => handleOtpChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
-                className="w-12 h-14 text-center text-2xl font-bold bg-black/20 border-white/40 text-white placeholder-white/60 rounded-lg"
+                className="w-12 h-14 text-center text-2xl font-bold rounded-lg"
               />
             ))}
           </div>
@@ -112,26 +112,24 @@ export default function VerifyOtp() {
           <Button
             onClick={handleVerify}
             disabled={isLoading || otp.some((d) => !d)}
-            className="w-full bg-green-600 hover:bg-green-500 text-white shadow-green-500/30 shadow-md"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/30 shadow-md"
           >
             {isLoading ? "Verifying..." : "Verify Code"}
           </Button>
 
           {/* Resend Code */}
-          <div className="text-center text-sm">
+          <div className="text-center text-sm text-muted-foreground">
             {canResend ? (
-              <button className="text-white hover:underline" onClick={handleResend}>
-                Resend code
-              </button>
+              <button className="text-primary hover:underline" onClick={handleResend}>Resend code</button>
             ) : (
-              <span className="text-white/60">Resend code in {resendCooldown}s</span>
+              <span>Resend code in {resendCooldown}s</span>
             )}
           </div>
 
           {/* Go Back */}
-          <div className="text-center text-sm">
+          <div className="text-center text-sm text-muted-foreground">
             Wrong email?{" "}
-            <Link to="/auth" className="text-white underline hover:text-green-300 transition">
+            <Link to="/auth" className="text-primary underline hover:text-primary/80 transition">
               Go back
             </Link>
           </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -92,9 +93,8 @@ export function AddUserModal({ open, onOpenChange, onSuccess }: AddUserModalProp
 
           <div className="space-y-2">
             <Label htmlFor="password">Password *</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "@/hooks/use-toast";
@@ -165,8 +166,7 @@ export const ChangePasswordModal = ({ open, onOpenChange, onSuccess }: ChangePas
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>New Password</Label>
-                <Input
-                  type="password"
+                <PasswordInput
                   placeholder="Enter new password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -177,8 +177,7 @@ export const ChangePasswordModal = ({ open, onOpenChange, onSuccess }: ChangePas
               </div>
               <div className="space-y-2">
                 <Label>Confirm Password</Label>
-                <Input
-                  type="password"
+                <PasswordInput
                   placeholder="Confirm new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}

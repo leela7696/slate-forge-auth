@@ -13,6 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { callEdgeFunction, authStorage } from "@/lib/auth";
@@ -172,7 +173,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#071d12] relative overflow-hidden px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden px-4">
 
       {/* Matching Landing Glow Background */}
       <div className="absolute inset-0 pointer-events-none">
@@ -180,7 +181,7 @@ export default function Auth() {
         <div className="absolute w-[700px] h-[700px] bg-green-700/20 rounded-full blur-[200px] animate-pulse-slow bottom-0 -right-32"></div>
       </div>
 
-      <Card className="w-full max-w-md bg-white/10 border border-white/20 backdrop-blur-xl shadow-2xl">
+      <Card className="w-full max-w-md bg-card border border-border backdrop-blur-xl shadow-2xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-bold text-center flex flex-col items-center gap-4">
 
@@ -196,7 +197,7 @@ export default function Auth() {
             {mode === "signup" && "Create Account"}
           </CardTitle>
 
-          <CardDescription className="text-center text-gray-300">
+          <CardDescription className="text-center text-muted-foreground">
             {mode === "email" && "Enter your email to continue"}
             {mode === "login" && "Sign in to your account"}
             {mode === "signup" && "Get started with Slate AI"}
@@ -213,12 +214,12 @@ export default function Auth() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="john@example.com" className="bg-black/20 border-white/30" {...field} />
+                      <Input type="email" placeholder="john@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
-                <Button className="w-full bg-green-600 hover:bg-green-500" disabled={isLoading || !emailForm.formState.isValid}>
+                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoading || !emailForm.formState.isValid}>
                   {isLoading ? "Checking..." : "Continue"}
                 </Button>
               </form>
@@ -233,7 +234,7 @@ export default function Auth() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" disabled className="bg-black/20 border-white/30" {...field} />
+                      <Input type="email" disabled {...field} />
                     </FormControl>
                   </FormItem>
                 )} />
@@ -242,24 +243,24 @@ export default function Auth() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" className="bg-black/20 border-white/30" {...field} />
+                      <PasswordInput placeholder="••••••••" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
 
                 <div className="flex justify-end">
-                  <Link to="/auth/forgot-password" className="text-sm text-green-400 hover:text-green-300 underline">
+                  <Link to="/auth/forgot-password" className="text-sm text-primary hover:text-primary/80 underline">
                     Forgot password?
                   </Link>
                 </div>
 
-                {/* Transparent Sign In button like navbar */}
-                <Button type="submit" className="w-full bg-transparent text-white border border-white/40 hover:border-white hover:bg-white/10 backdrop-blur transition-all" disabled={isLoading}>
+                {/* Transparent Sign In button styled like landing navbar */}
+                <Button type="submit" className="w-full bg-transparent text-foreground border border-border hover:bg-accent hover:text-accent-foreground backdrop-blur transition-all" disabled={isLoading}>
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
 
-                <Button type="button" variant="ghost" className="w-full text-gray-300 hover:text-white" onClick={handleBack}>
+                <Button type="button" variant="ghost" className="w-full text-muted-foreground hover:text-foreground" onClick={handleBack}>
                   Use different email
                 </Button>
               </form>
@@ -274,7 +275,7 @@ export default function Auth() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" disabled className="bg-black/20 border-white/30" {...field} />
+                      <Input type="email" disabled {...field} />
                     </FormControl>
                   </FormItem>
                 )} />
@@ -288,10 +289,8 @@ export default function Auth() {
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
-                            <Input
-                              type="password"
+                            <PasswordInput
                               placeholder="••••••••"
-                              className="bg-black/20 border-white/30"
                               {...field}
                             />
                           </FormControl>
@@ -340,17 +339,17 @@ export default function Auth() {
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" className="bg-black/20 border-white/30" {...field} />
+                      <PasswordInput placeholder="••••••••" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
 
-                <Button className="w-full bg-transparent text-white border border-white/40 hover:border-white hover:bg-white/10 backdrop-blur transition-all" disabled={isLoading || !signupForm.formState.isValid}>
+                <Button className="w-full bg-transparent text-foreground border border-border hover:bg-accent hover:text-accent-foreground backdrop-blur transition-all" disabled={isLoading || !signupForm.formState.isValid}>
                   {isLoading ? "Creating..." : "Create Account"}
                 </Button>
 
-                <Button type="button" variant="ghost" className="w-full text-gray-300 hover:text-white" onClick={handleBack}>
+                <Button type="button" variant="ghost" className="w-full text-muted-foreground hover:text-foreground" onClick={handleBack}>
                   Use different email
                 </Button>
               </form>
